@@ -1,0 +1,72 @@
+name: my-school-my-parents
+
+# 4 contenedores separados:
+#   db       -> PostgreSQL 16 (persistencia del backend)
+#   backend  -> API NestJS + Fastify + TypeScript (auth local JWT + OCR + health)
+#   frontend -> build Vite servido con `vite preview` (sin nginx dentro)
+#   nginx    -> puerta de entrada única, publicada en el host como :6060
+#               /       -> frontend:4173
+#               /api/   -> backend:3001
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: msm-db
+    environment:
+      POSTGRES_DB: myschoolmyparents
+      POSTGRES_USER: msm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-msm_dev_password}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msm -d myschoolmyparents"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: msm-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://msm:${POSTGRES_PASSWORD:-msm_dev_password}@db:5432/myschoolmyparents
+      JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-secret}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:6060,http://localhost:5173
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "3001"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    container_name: msm-frontend
+    depends_on:
+      - backend
+    expose:
+      - "4173"
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ./nginx
+    container_name: msm-nginx
+    ports:
+      - "6060:80"
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
