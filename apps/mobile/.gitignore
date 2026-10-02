@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.expo/
+web-build/
+*.log
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Proyectos nativos que genera Expo (`expo prebuild` / `expo run:*`); la fuente es app.json
+/ios/
+/android/
