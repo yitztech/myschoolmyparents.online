@@ -9,6 +9,8 @@ WORKDIR /app
 COPY apps/frontend/package.json apps/frontend/package-lock.json ./
 RUN npm ci && npm cache clean --force
 COPY apps/frontend/ ./
+# La página /descargas muestra la versión de la app móvil (ver vite.config.ts).
+COPY apps/mobile/app.json /mobile/app.json
 ARG VITE_AUTH_API_URL=""
 ARG VITE_GOOGLE_CLIENT_ID=""
 ENV VITE_AUTH_API_URL=$VITE_AUTH_API_URL

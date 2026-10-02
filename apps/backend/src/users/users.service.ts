@@ -29,6 +29,10 @@ export class UsersService {
     return this.repo.save(user);
   }
 
+  async remove(id: string): Promise<void> {
+    await this.repo.delete({ id });
+  }
+
   /**
    * Escribe solo las columnas indicadas. A diferencia de `save`, no pisa
    * con valores leídos antes las columnas que otra petición haya cambiado

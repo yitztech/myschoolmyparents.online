@@ -1,4 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,500;9..144,0,700;9..144,0,900;9..144,1,700;9..144,1,900&family=Karla:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap');
+/* Fuentes autoalojadas (antes Google Fonts): servirlas desde el propio dominio
+   evita enviar la IP de cada visitante a Google. */
+@import "@fontsource-variable/fraunces/opsz.css";
+@import "@fontsource-variable/fraunces/opsz-italic.css";
+@import "@fontsource-variable/karla/wght.css";
+@import "@fontsource-variable/karla/wght-italic.css";
 @import "tailwindcss";
 
 @theme {
@@ -15,8 +20,8 @@
   --color-candy: #FF7AB8;
   --color-sky: #BFE6F5;
 
-  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
-  --font-body: "Karla", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-body: "Karla Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {

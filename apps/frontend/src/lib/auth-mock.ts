@@ -124,3 +124,13 @@ export async function confirmPasswordReset(email: string, code: string, newPassw
   delete all[cleanEmail];
   localStorage.setItem(RESET_KEY, JSON.stringify(all));
 }
+
+export async function deleteAccount(email: string, password: string): Promise<void> {
+  await delay();
+  const users = readUsers();
+  const found = users.find((u) => u.email === email.trim().toLowerCase());
+  if (!found || (found.provider === 'email' && found.passwordHash !== mockHash(password))) {
+    throw new AuthError('auth_failed', 'La contraseña no es correcta.');
+  }
+  writeUsers(users.filter((u) => u !== found));
+}

@@ -55,6 +55,8 @@ services:
       - ./apps/frontend/src:/app/src:ro
       - ./apps/frontend/public:/app/public:ro
       - ./apps/frontend/index.html:/app/index.html:ro
+      # Versión de la app móvil para la página /descargas (ver vite.config.ts).
+      - ./apps/mobile/app.json:/mobile/app.json:ro
       - /app/node_modules
     expose:
       - "5173"

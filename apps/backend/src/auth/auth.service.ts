@@ -16,6 +16,7 @@ import { expiresInSeconds } from './expires-in';
 import { LoginDto } from './dto/login.dto';
 import { RecoverDto } from './dto/recover.dto';
 import { RegisterDto } from './dto/register.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 import { ResetDto } from './dto/reset.dto';
 import { User } from '../users/user.entity';
 
@@ -269,6 +270,25 @@ export class AuthService {
     });
     this.clearFails(email);
     this.logger.info({ userId: user.id, email }, 'auth.reset contraseña actualizada');
+    return { ok: true };
+  }
+
+  /**
+   * Borra la cuenta (y con ella nombre, correo, hash y códigos de
+   * recuperación). Los libros nunca llegan al servidor: viven en el
+   * dispositivo. La contraseña fallida cuenta como un intento de login más,
+   * así que tampoco sirve para adivinarla.
+   */
+  async deleteAccount(user: User, dto: DeleteAccountDto, ip: string) {
+    this.checkBruteForce(user.email, ip);
+    if (!(await bcrypt.compare(dto.password, user.passwordHash))) {
+      this.noteFail(user.email, ip);
+      this.logger.warn({ userId: user.id, ip }, 'auth.delete contraseña incorrecta');
+      throw new UnauthorizedException('La contraseña no es correcta.');
+    }
+    await this.users.remove(user.id);
+    this.clearFails(user.email);
+    this.logger.info({ userId: user.id }, 'auth.delete cuenta eliminada');
     return { ok: true };
   }
 }

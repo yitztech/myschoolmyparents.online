@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import {
   AuthError,
   confirmPasswordReset,
+  deleteAccount as svcDeleteAccount,
   fetchMe,
   getStoredSession,
   loginWithEmail,
@@ -23,6 +24,7 @@ interface AuthContextValue {
   requestReset: (email: string) => Promise<{ devCode?: string }>;
   confirmReset: (email: string, code: string, newPassword: string) => Promise<void>;
   logout: () => void;
+  deleteAccount: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -95,6 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   }, []);
 
+  const deleteAccount = useCallback(async (password: string) => {
+    await svcDeleteAccount(password);
+    setSession(null);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user: session?.user ?? null,
@@ -106,8 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       requestReset,
       confirmReset,
       logout,
+      deleteAccount,
     }),
-    [session, loading, login, register, loginGoogle, requestReset, confirmReset, logout]
+    [session, loading, login, register, loginGoogle, requestReset, confirmReset, logout, deleteAccount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -80,6 +80,19 @@ server {
     include /etc/nginx/conf.d/analytics.inc;
   }
 
+  # Descarga directa de la última versión de las apps (página /descargas).
+  # Redirige al alias fijo del último release de GitHub (ver
+  # scripts/lib/installer-names.mjs, LATEST_NAMES). El access_log de nginx
+  # cuenta estas peticiones aunque el enlace se comparta fuera de la web.
+  location = /descargas/android {
+    add_header Cache-Control "no-store" always;
+    return 302 https://github.com/yitztech/myschoolmyparents.online/releases/latest/download/MySchoolMyParents-Online-android.apk;
+  }
+  location = /descargas/ios {
+    add_header Cache-Control "no-store" always;
+    return 302 https://github.com/yitztech/myschoolmyparents.online/releases/latest/download/MySchoolMyParents-Online-ios-sin-firmar.ipa;
+  }
+
   # SPA: cualquier ruta no estática sirve index.html.
   location / {
     try_files $uri $uri/ /index.html;
