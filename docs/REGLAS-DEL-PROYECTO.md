@@ -57,6 +57,10 @@ La clave de firma de Android vive en `~/.myschoolmyparents-secrets/android` (`re
 `signing.json`), fuera del repo. **Es única e irremplazable**: con otra clave, Android no actualiza sobre la
 versión instalada. Guarda una copia cifrada.
 
+Es la misma clave de subida de la app Flutter (alias `upload`, certificado SHA-256
+`86:A0:52:2B:A4:4B:6A:DA:C3:F9:3A:8E:7E:47:C2:43:17:3D:C6:CF:16:D0:7E:DD:B0:4A:0E:26:66:15:F6:45`), así que la
+app Expo se instala encima de la 0.2.x. Comprobado en un emulador: 0.2.0 → 0.4.0 sin desinstalar.
+
 Publicar una versión: subir `expo.version` y la compilación en `app.json` y lanzar a mano el workflow
 **App móvil · instaladores** (`mobile-release.yml`) desde `main`. Compila el APK en Linux y el IPA en macOS, y
 crea la release `v<versión>` con los nombres oficiales, los alias y las huellas. Necesita en el entorno
