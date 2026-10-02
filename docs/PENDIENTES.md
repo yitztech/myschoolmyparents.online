@@ -1,6 +1,6 @@
 # Pendientes tras la migración a Expo
 
-Estado: rama `migracion-expo` (sin merge a `main`, sin remoto). Última verificación: 61 pruebas de la app + 4 de
+Estado: la migración ya está en `main` (sin remoto). Última verificación: 61 pruebas de la app + 4 de
 scripts, `tsc` y `expo-doctor` limpios, Metro empaqueta Android e iOS.
 
 ## Antes de publicar
@@ -12,7 +12,6 @@ scripts, `tsc` y `expo-doctor` limpios, Metro empaqueta Android e iOS.
       `projectId` de relleno de `app.json`); crear el secreto `EXPO_TOKEN` y la variable `EAS_ENABLED=true`.
 - [ ] **Probar `scripts/build-android-direct.mjs`** (APK firmado local; necesita JDK 17 y Android SDK) y guardar la
       clave de `~/.myschoolmyparents-secrets/android`.
-- [ ] Decidir y hacer el **merge de `migracion-expo` a `main`**.
 
 ## Backend / producto
 
