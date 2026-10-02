@@ -1,84 +1,170 @@
-# ─── PROD (myschoolmyparents.online) ───
-# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up --build -d
-# - nginx publica SOLO en 127.0.0.1:80: la entrada real es el reverse proxy
-#   del host (Caddy/Traefik), que termina el TLS y pone HSTS + redirect
-#   80->443. Sin esto el sitio sería alcanzable en HTTP plano por IP.
-# - El backend se une además a la red externa del servidor de correo para
-#   hablar SMTP con Stalwart (correo transaccional; las campañas van por
-#   Listmonk, con otra identidad de envío).
-# - Sin bind-mounts ni hot-reload: imágenes inmutables (`npm ci`).
-# - Filesystem de solo lectura en backend y nginx (tmpfs donde hace falta).
-# - Límites de memoria/CPU para que un pico (p. ej. OCR) no tumbe el host.
-# - Frontend: estáticos Vite horneados en la imagen nginx (nginx/Dockerfile.prod).
-#   No existe servicio `frontend` en prod. Ojo: VITE_* son build-time,
-#   cambiarlos exige reconstruir (`--build`).
-# - Requiere secretos reales (falla al arrancar si faltan: POSTGRES_PASSWORD, JWT_SECRET).
+# ─── PROD en Coolify (myschoolmyparents.online) ───
+# Archivo autónomo: Coolify lee solo este compose (no es un override de
+# docker-compose.yml, que queda para desarrollo).
+#
+# - El servidor no compila: las imágenes las publica GitHub Actions en GHCR
+#   (.github/workflows/deploy.yml) y Coolify las descarga y arranca.
+# - El proxy de la plataforma (Traefik) pone el dominio y el HTTPS, y solo
+#   envía tráfico a `nginx`, en su puerto 80 interno. Ningún servicio publica
+#   puertos: el 80 del servidor es de Traefik.
+# - Las variables las inyecta Coolify: nada de --env-file ni .env. Todo lo que
+#   termina en `:?` es obligatorio y, si falta, el despliegue se detiene.
+# - Cada servicio lleva mem_limit: varios clientes comparten servidor.
+#
+# Comprobación local, sin ningún archivo .env:
+#   IMAGE_PREFIX=ghcr.io/yitztech/myschoolmyparents.online SITE_URL=https://myschoolmyparents.online \
+#   POSTGRES_PASSWORD=x JWT_SECRET=x SMTP_HOST=x SMTP_USER=x SMTP_PASSWORD=x MAIL_FROM=x \
+#   TRUSTED_PROXY_CIDR=10.0.0.0/24 docker compose -f docker-compose.prod.yml config
+
+x-logging: &log
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 networks:
-  # Red del servidor de correo, creada por el playbook que despliega
-  # Stalwart. Debe existir antes del `up` (docker network ls).
-  mail:
-    external: true
-    name: ${MAIL_NETWORK:?Falta MAIL_NETWORK (red Docker de Stalwart; ver .env.prod.example)}
+  # Tráfico de la app: nginx ↔ backend, y salida del backend al SMTP.
+  public:
+  # Solo backend ↔ PostgreSQL. Sin salida al exterior ni acceso desde nginx.
+  db-net:
+    internal: true
+
+volumes:
+  pgdata:
 
 services:
   db:
-    container_name: msm-db-prod
+    image: postgres:18-alpine
+    networks:
+      - db-net
+    environment:
+      POSTGRES_DB: myschoolmyparents
+      POSTGRES_USER: msm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD}
     volumes:
-      # Datos de producción, separados del volumen `pgdata` de dev.
-      - pgdata_prod:/var/lib/postgresql/data
-    deploy:
-      resources:
-        limits:
-          memory: 768M
-          cpus: "1.0"
+      # PostgreSQL 18 guarda los datos en un subdirectorio por versión, así
+      # que el volumen se monta en /var/lib/postgresql (no en .../data).
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msm -d myschoolmyparents"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # La imagen oficial inicia como root para preparar el volumen y baja al
+    # usuario `postgres`: solo se conservan las capabilities que necesita.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 768m
+    cpus: 1.0
+    logging: *log
+    restart: unless-stopped
 
   backend:
-    container_name: msm-backend-prod
-    image: my-school-my-parents-backend:prod
-    build:
-      target: prod
+    image: ${IMAGE_PREFIX:?Falta IMAGE_PREFIX (p. ej. ghcr.io/yitztech/myschoolmyparents.online)}-backend:${IMAGE_TAG:-main}
     networks:
       - public
       - db-net
-      - mail
     environment:
       NODE_ENV: production
-    # Solo lectura: tesseract cachea el .traineddata en /tmp (ver
-    # backend/src/ocr/ocr.service.ts) y los uploads van en memoria.
+      PORT: 3001
+      # La conexión se arma en el backend a partir de las piezas, con la
+      # contraseña codificada: una URL escrita aquí se rompería si la
+      # contraseña generada lleva caracteres como / @ :
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: msm
+      DB_NAME: myschoolmyparents
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${SITE_URL:?Falta SITE_URL}
+      APP_PUBLIC_URL: ${SITE_URL:?Falta SITE_URL}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # nginx ya reescribe X-Forwarded-For con la IP real del cliente (ver
+      # infra/nginx/nginx.prod.conf.template); el backend confía en los saltos
+      # internos, que viven en direcciones privadas.
+      TRUST_PROXY: ${TRUST_PROXY:-loopback,linklocal,uniquelocal}
+      # Correo transaccional de la plataforma (TLS implícito en el 465).
+      SMTP_HOST: ${SMTP_HOST:?Falta SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:?Falta SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?Falta SMTP_PASSWORD}
+      SMTP_FROM: ${MAIL_FROM:?Falta MAIL_FROM}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # 127.0.0.1 (no `localhost`): el backend escucha en IPv4 y el wget de
+      # busybox no reintenta en IPv4 si `localhost` resuelve primero a ::1.
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # Runtime como usuario `node` (ver Dockerfile): sin capabilities y sin
+    # poder escalar privilegios. `init` recoge los workers de tesseract.
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # Solo lectura: tesseract cachea el .traineddata en /tmp y los uploads van
+    # en memoria.
     read_only: true
     tmpfs:
       - /tmp:size=256M,mode=1777
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: "2.0"
+    mem_limit: 1g
+    cpus: 2.0
+    logging: *log
+    restart: unless-stopped
 
+  # Único servicio con dominio: Traefik → nginx:80. Sirve los estáticos de la
+  # web, /version.json y hace de proxy de /api/ hacia el backend.
   nginx:
-    container_name: msm-nginx-prod
-    image: my-school-my-parents-nginx:prod
-    build:
-      context: .
-      dockerfile: ./infra/nginx/Dockerfile.prod
-      args:
-        VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-}
-        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
-    ports:
-      # Solo loopback: la entrada pública es el reverse proxy del host
-      # (Caddy/Traefik), que termina el TLS. Publicarlo en 0.0.0.0 dejaría
-      # el sitio accesible en HTTP plano por la IP del VPS, saltándose esa
-      # capa. Si el :80 del host ya está ocupado, cambia el puerto de la
-      # izquierda (p. ej. "127.0.0.1:8080:80") y apunta ahí el proxy.
-      - "127.0.0.1:80:80"
+    image: ${IMAGE_PREFIX:?Falta IMAGE_PREFIX}-nginx:${IMAGE_TAG:-main}
+    networks:
+      - public
+    environment:
+      # Subred de Traefik: solo desde ahí se acepta X-Forwarded-For.
+      TRUSTED_PROXY_CIDR: ${TRUSTED_PROXY_CIDR:?Falta TRUSTED_PROXY_CIDR (subred de Traefik)}
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      # /healthz lo sirve el propio nginx: no depende del backend.
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # El master arranca como root y necesita: atar el puerto 80
+    # (NET_BIND_SERVICE), preparar la caché (CHOWN) y bajar los workers al
+    # usuario `nginx` (SETGID/SETUID). Todo lo demás cae.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - NET_BIND_SERVICE
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
     read_only: true
     tmpfs:
       - /var/cache/nginx
       - /var/run
-    deploy:
-      resources:
-        limits:
-          memory: 128M
+      # Aquí escribe el entrypoint la configuración generada desde la
+      # plantilla (TRUSTED_PROXY_CIDR y RELEASE_SHA sustituidos al arrancar).
+      - /etc/nginx/conf.d
+    mem_limit: 128m
+    cpus: 0.5
+    logging: *log
+    restart: unless-stopped

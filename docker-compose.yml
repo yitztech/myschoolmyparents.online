@@ -1,19 +1,18 @@
 name: my-school-my-parents
 
-# Base común: solo topología (servicios, redes, healthchecks) + protecciones
-# que aplican a TODOS los entornos (ver refuerzos extra por env en
-# docker-compose.override.yml y docker-compose.prod.yml).
-#   DEV:  docker compose --env-file .env.dev up --build
-#         (añade docker-compose.override.yml automáticamente)
-#   PROD: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up --build -d
+# SOLO DESARROLLO: base que completa docker-compose.override.yml (se añade
+# automáticamente).
+#   cp .env.example .env.dev        # la primera vez
+#   docker compose --env-file .env.dev up --build
+# Producción NO usa este archivo: Coolify lee solo docker-compose.prod.yml,
+# que es autónomo y arranca imágenes ya publicadas en GHCR.
 #
 # Notas:
 # - El servicio `frontend` (vite dev) solo existe en dev (override); en prod los
-#   estáticos van horneados en la imagen nginx (nginx/Dockerfile.prod).
+#   estáticos van horneados en la imagen nginx (infra/nginx/Dockerfile.prod).
 # - Redes: `public` (nginx/frontend/backend) y `db-net` (backend/db). La base
 #   de datos NO es alcanzable desde nginx ni desde el frontend.
-# - Los volúmenes separan datos: `pgdata` (dev, conserva los datos locales
-#   actuales) y `pgdata_prod` (prod). No mezclar.
+# - `pgdata` conserva los datos locales de desarrollo.
 
 x-logging: &log
   driver: json-file
@@ -37,7 +36,7 @@ services:
     environment:
       POSTGRES_DB: myschoolmyparents
       POSTGRES_USER: msm
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD (usa --env-file .env.dev o .env.prod)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD (cp .env.example .env.dev y usa --env-file .env.dev)}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -144,5 +143,3 @@ services:
 volumes:
   # Desarrollo local (reutiliza los datos que ya tenías).
   pgdata:
-  # Producción (se monta en docker-compose.prod.yml; separado de dev).
-  pgdata_prod:

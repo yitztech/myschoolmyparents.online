@@ -21,7 +21,7 @@ function requireAuthApiUrl(authApiUrl: string): Plugin {
       throw new Error(
         'VITE_AUTH_API_URL está vacío en un build de producción.\n' +
           'Eso activaría el mock de localStorage y la autenticación nunca llegaría al backend.\n' +
-          'Pon VITE_AUTH_API_URL=/api en .env.prod y reconstruye con --build.',
+          'Pásalo como build-arg VITE_AUTH_API_URL=/api (en CI sale de las Variables del repositorio).',
       )
     },
   }

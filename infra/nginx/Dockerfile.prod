@@ -1,8 +1,10 @@
-# Nginx PROD — imagen autónoma: build Vite + estáticos + proxy /api/.
-# Contexto de build: la RAÍZ del repo (ver docker-compose.prod.yml).
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up --build -d
+# Nginx PROD — imagen autónoma: build Vite + estáticos + proxy /api/ + /version.json.
+# La construye GitHub Actions (.github/workflows/deploy.yml) desde la RAÍZ del repo:
+#   docker build -f infra/nginx/Dockerfile.prod --build-arg RELEASE_SHA=<sha> \
+#     --build-arg VITE_AUTH_API_URL=/api .
+# La configuración va dentro de la imagen: el servidor solo descarga y arranca.
 # Ojo: VITE_* son build-time (Vite los hornea en el JS); cambiarlos exige reconstruir.
-FROM node:24.20-alpine AS frontend-build
+FROM node:24.21-alpine AS frontend-build
 WORKDIR /app
 COPY apps/frontend/package.json apps/frontend/package-lock.json ./
 RUN npm ci && npm cache clean --force
@@ -14,7 +16,15 @@ ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
 FROM nginx:1.31-alpine
+# Commit que se sirve en /version.json.
+ARG RELEASE_SHA=dev
+ENV RELEASE_SHA=${RELEASE_SHA} \
+    # El entrypoint de nginx solo sustituye estas variables en la plantilla:
+    # el resto de `$...` son variables de nginx y deben quedar intactas.
+    NGINX_ENVSUBST_FILTER='^(TRUSTED_PROXY_CIDR|RELEASE_SHA)$'
 COPY --from=frontend-build /app/dist /usr/share/nginx/html
-COPY infra/nginx/nginx.prod.conf /etc/nginx/conf.d/default.conf
+# La plantilla se convierte en /etc/nginx/conf.d/default.conf al arrancar
+# (un tmpfs en el compose, porque el resto del sistema es de solo lectura).
+COPY infra/nginx/nginx.prod.conf.template /etc/nginx/templates/default.conf.template
 COPY infra/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
 EXPOSE 80

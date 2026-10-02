@@ -3,7 +3,7 @@
 #   dev:  `nest start --watch` (hot-reload; el src se monta por volumen).
 #   prod: compila TypeScript y arranca solo con dependencias prod.
 # El runtime corre como usuario `node` (no root).
-FROM node:24.20-alpine AS base
+FROM node:24.21-alpine AS base
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci && npm cache clean --force && chown -R node:node /app
@@ -34,7 +34,7 @@ CMD ["npm", "run", "start:dev"]
 FROM base AS build
 RUN npm run build
 
-FROM node:24.20-alpine AS prod
+FROM node:24.21-alpine AS prod
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json* ./

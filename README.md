@@ -48,10 +48,11 @@ Réplica web de la app MyParentMyChildren (Flutter) con **React + shadcn + Docke
 
 ```
 .
-  docker-compose.yml          # base `my-school-my-parents`: db + backend + nginx (sin envs)
+  docker-compose.yml          # DEV, base: db + backend + nginx (sin envs)
   docker-compose.override.yml # DEV (auto): vite dev + nest watch, puertos :6060/:5173/:3001/:5432
-  docker-compose.prod.yml     # PROD: estáticos en nginx, sin puertos internos, secretos required
-  .env.example / .env.dev / .env.prod.example (.env.prod real, no versionado)
+  docker-compose.prod.yml     # PROD en Coolify: autónomo, solo imágenes de GHCR, sin puertos
+  .env.example                # plantilla de DEV → copiar a .env.dev (ningún .env se versiona)
+  .github/workflows/deploy.yml # publica backend y nginx en GHCR → webhook de Coolify → /version.json
   apps/frontend/            # React 19 + Vite + Tailwind v4 + shadcn (vendored) + Dexie (+ Dockerfile multi-stage dev/prod)
     src/lib/                # types, db, ocr, queue, speech, images, auth, password, auth-context
     src/components/         # Library, BookDetail, Reader, ReviewCards, PagesList, CaptureDialog, VoiceSettings, auth/*, ui/*
@@ -74,26 +75,27 @@ Réplica web de la app MyParentMyChildren (Flutter) con **React + shadcn + Docke
 - **OCR con sesión:** `POST /api/ocr` exige `Authorization: Bearer`. Es la
   operación más cara del backend, así que su coste queda ligado a una cuenta.
 - **Seguridad:** helmet (cabeceras), CORS restringido (`CORS_ORIGIN`), rate-limit
-  global 200 req/min por IP real (ver *Cadena de proxies*) + anti-fuerza-bruta
-  en login (10 fallos/10 min → 429), validación estricta de DTOs (misma
+  global 200 req/min por IP real (ver *Cadena de proxies*) y 20 req/min en las
+  rutas de cuenta, anti-fuerza-bruta en login (10 fallos/10 min por correo + IP
+  y 50 por correo → 429), validación estricta de DTOs (misma
   política de contraseña que el frontend), bcrypt (12 rondas), JWT firmado
   (`JWT_SECRET`) con `tokenVersion` —cambiar la contraseña caduca las sesiones
   abiertas—, respuestas genéricas para no enumerar usuarios ni temporizar.
 - **Recuperación acotada:** código con `crypto.randomInt` (no `Math.random`),
-  5 intentos por código antes de anularlo y un solo correo por cuenta y minuto
-  (si no, el endpoint sería un cañón de correo saliente firmado con nuestro
-  dominio, y eso quema la reputación de envío).
+  10 intentos fallidos por cuenta y hora sumando todos los códigos (contados
+  con un UPDATE atómico, así que las peticiones simultáneas no se saltan el
+  tope) y un solo correo por cuenta y minuto (si no, el endpoint sería un
+  cañón de correo saliente firmado con nuestro dominio, y eso quema la
+  reputación de envío).
+- **OCR acotado:** imágenes de hasta 10 000 px por lado y 40 MP (se mira la
+  cabecera antes de decodificar), 2 en paralelo con cola de 8 y una por cuenta.
 - **Observabilidad:** logs JSON con `nestjs-pino` (request-id, método, URL,
   estado, latencia; secretos redactados; pretty en desarrollo). Eventos:
   altas, logins ok/fallidos, resets, OCR. `GET /api/health` incluye estado de la BD.
 - **BD:** PostgreSQL vía TypeORM; esquema por migraciones (`migrationsRun`).
-
-```bash
-# imprescindibles en producción (sin defaults: el arranque falla si faltan)
-cp .env.prod.example .env.prod   # editar con secretos reales (NO se versiona)
-JWT_SECRET=$(openssl rand -base64 32)  # pegarlo en .env.prod junto a POSTGRES_PASSWORD
-docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up --build -d
-```
+  Conexión por `DATABASE_URL` o, si no viene, por `DB_HOST`/`DB_PORT`/`DB_USER`/
+  `DB_PASSWORD`/`DB_NAME` (así la usa producción: la contraseña generada puede
+  llevar caracteres que romperían una URL escrita a mano).
 
 ## Cuentas: login, registro y recuperación
 
@@ -110,7 +112,7 @@ El backend de cuentas es el de este repo, servido en el mismo origen a
 través de nginx:
 
 ```bash
-# .env.dev y .env.prod (requiere --build: VITE_* es build-time)
+# .env.dev en local; en producción, Variable del repositorio (build-time: requiere reconstruir)
 VITE_AUTH_API_URL=/api
 ```
 
@@ -124,7 +126,7 @@ datos. Ese mock no es seguro —el "hash" es reversible y el código de
 recuperación se devuelve al cliente— así que tiene dos cierres:
 
 1. **El build de producción falla** si la variable viene vacía
-   (`vite.config.ts`). Sin ese cierre, un `.env.prod` incompleto publicaba un
+   (`vite.config.ts`). Sin ese cierre, una configuración incompleta publicaba un
    sitio donde la autenticación nunca llegaba al backend, sin ningún error
    visible.
 2. El mock se carga con `import()` dinámico bajo `import.meta.env.DEV`, así
@@ -138,107 +140,115 @@ el código de recuperación sale por los logs del backend
 
 ## Entornos: dev local vs producción
 
-|                  | DEV local | PROD |
+|                  | DEV local | PROD (Coolify) |
 |---|---|---|
-| Comando | `docker compose --env-file .env.dev up --build` | `docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up --build -d` |
-| Ficheros | `docker-compose.yml` + `docker-compose.override.yml` (automático) | `docker-compose.yml` + `docker-compose.prod.yml` |
+| Arranque | `docker compose --env-file .env.dev up --build` | lo hace Coolify al recibir el webhook de `deploy.yml` |
+| Ficheros | `docker-compose.yml` + `docker-compose.override.yml` (automático) | solo `docker-compose.prod.yml` (autónomo) |
+| Imágenes | se construyen en local | las construye GitHub Actions y las publica en GHCR; el servidor no compila |
 | Frontend | `vite dev` con HMR (`frontend:5173`) | estáticos Vite horneados en nginx (sin Node en prod) |
 | Backend | `nest start --watch`, logs legibles | `node dist/main.js`, logs JSON |
-| Puertos host | `:6060` (nginx), `:5173` (vite), `:3001` (api), `:5432` (db) | `:80` (nginx) — nada más expuesto |
-| Volumen PG | `pgdata` (reutiliza tus datos locales actuales) | `pgdata_prod` (separado) |
-| Secretos | tontos y versionados (`.env.dev`) | reales en `.env.prod` (no versionado; fail-fast si faltan) |
-| CORS | localhost + dominio OrbStack | solo `https://myschoolmyparents.online` |
+| Puertos | `:6060` (nginx), `:5173` (vite), `:3001` (api), `:5432` (db), solo en loopback | ninguno: Traefik → `nginx:80` |
+| PostgreSQL | `postgres:16-alpine`, volumen `pgdata` | `postgres:18-alpine`, volumen `pgdata` en `/var/lib/postgresql` |
+| Variables | `.env.dev`, copiado de `.env.example` (ignorado por git) | las inyecta Coolify; ningún `.env` |
+| CORS | localhost + dominio OrbStack | `SITE_URL` |
 
-Ficheros de entorno (raíz): `.env.example` (plantilla), `.env.dev` (dev,
-versionado), `.env.prod.example` → copiar a `.env.prod` (secretos, ignorado
-por git, `chmod 600`). Ojo: `VITE_*` son **build-time** — cambiarlos exige reconstruir
-la imagen (`--build`).
+Ningún `.env` se versiona, salvo las plantillas `*.example`. El repo es
+público: los valores de `.env.example` son de juguete y no se usan nunca fuera
+de desarrollo. Ojo: `VITE_*` son **build-time**: cambiarlos exige reconstruir
+la imagen.
 
-## Despliegue en el VPS (Ansible)
+## Despliegue en producción (Coolify)
 
-El compose no es la capa expuesta: delante hay un **reverse proxy en el host**
-(Caddy o Traefik) que termina el TLS. Por eso `nginx` publica solo en
-`127.0.0.1:80` — si se publicara en `0.0.0.0`, el sitio sería alcanzable en
-HTTP plano por la IP del VPS, saltándose esa capa.
+Producción corre en un VPS de la plataforma de yitztech gestionado por
+Coolify, con el mismo esquema que `yitztech/plantilla-cliente`:
 
-Lo que tiene que hacer el proxy del host:
+1. **Publicar** (`.github/workflows/deploy.yml`, en cada push a `main` salvo
+   cambios solo en `apps/mobile/**`, `docs/**` o `*.md`): construye
+   `ghcr.io/yitztech/myschoolmyparents.online-backend` y `-nginx` con las
+   etiquetas `main` y el SHA del commit. Las `VITE_*` van como build-args
+   desde las *Variables* del repositorio (`VITE_AUTH_API_URL`, por defecto
+   `/api`; `VITE_GOOGLE_CLIENT_ID`).
+2. **Desplegar**: el job `desplegar` (entorno `production`, solo desde
+   `main`) hace `POST` al webhook de Coolify, que descarga las imágenes y
+   arranca `docker-compose.prod.yml`.
+3. **Comprobar**: espera hasta que `SITE_URL/version.json` devuelva
+   `{"revision":"<SHA del commit>"}`.
 
-- Terminar TLS para `myschoolmyparents.online` y redirigir 80 → 443.
-- Poner **HSTS** (`Strict-Transport-Security`). No puede ponerlo el nginx del
-  contenedor: es el proxy quien sabe que la conexión llegó por HTTPS.
-- Validar el `Host` (el nginx del contenedor acepta cualquiera, porque solo
-  le llega tráfico del proxy).
+El compose de producción no lleva `build:`, `ports:` ni `container_name:`,
+y todos los servicios tienen `mem_limit`. Solo `nginx` recibe tráfico (de
+Traefik, que pone el dominio, el certificado y la redirección a HTTPS).
+
+### Variables de la plataforma
+
+Las pone Coolify; no van en el repo. Si hace falta otra, se pide a la
+plataforma.
+
+| Variable | Uso |
+|---|---|
+| `IMAGE_PREFIX`, `IMAGE_TAG` | imágenes de GHCR (`IMAGE_TAG` por defecto `main`) |
+| `SITE_URL` | `CORS_ORIGIN` y `APP_PUBLIC_URL` del backend |
+| `POSTGRES_PASSWORD`, `JWT_SECRET` | generados por la plataforma |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` | correo transaccional (465, TLS implícito) |
+| `MAIL_FROM` | se mapea a `SMTP_FROM` |
+| `TRUSTED_PROXY_CIDR` | subred de Traefik: nginx solo acepta `X-Forwarded-For` desde ahí |
+
+Comprobación antes de pedir un despliegue, sin ningún `.env`:
+
+```bash
+IMAGE_PREFIX=ghcr.io/yitztech/myschoolmyparents.online SITE_URL=https://myschoolmyparents.online \
+POSTGRES_PASSWORD=x JWT_SECRET=x SMTP_HOST=x SMTP_USER=x SMTP_PASSWORD=x MAIL_FROM=x \
+TRUSTED_PROXY_CIDR=10.0.0.0/24 docker compose -f docker-compose.prod.yml config
+```
 
 ### Cadena de proxies y la IP real
 
 `X-Forwarded-For` lo puede escribir el cliente, así que hay que decidir de
-quién fiarse. `TRUST_PROXY` lista los rangos de confianza:
+quién fiarse. Hay dos saltos:
 
-```
-TRUST_PROXY=loopback,linklocal,uniquelocal   # todas las direcciones privadas
-```
+1. **nginx** solo acepta el `X-Forwarded-For` que llega desde
+   `TRUSTED_PROXY_CIDR` (`set_real_ip_from`, la subred de Traefik), resuelve
+   la IP real y **sobrescribe** la cabecera hacia el backend con esa IP: lo
+   que el cliente haya inyectado no pasa.
+2. **El backend** confía en los rangos de `TRUST_PROXY` (por defecto
+   `loopback,linklocal,uniquelocal`, donde vive nginx) y toma la siguiente
+   dirección: la del cliente.
 
-Los saltos internos (proxy del host y nginx del contenedor) están en
-direcciones privadas, así que el backend confía en ellas y **corta en la
-primera IP pública**: esa es la del cliente real. Un `X-Forwarded-For`
-inyectado por el cliente queda a la izquierda de esa y nunca se lee.
+Dos formas que **no** sirven en el backend, por si alguien las reintroduce:
 
-Dos formas que **no** sirven, por si alguien las reintroduce:
-
-- `trustProxy: true` toma el primer valor del XFF venga de donde venga, y
-  como nginx usa `$proxy_add_x_forwarded_for` (que conserva lo que mandó el
-  cliente), cualquiera falsea su IP y se salta el rate limit.
+- `trustProxy: true` toma el primer valor del XFF venga de donde venga, así
+  que cualquiera falsea su IP y se salta el rate limit.
 - `trustProxy: <número de saltos>` es lo que fastify **rechaza desde 5.12.1**
   (`unsupported trust argument`): ignoraba la dirección del par y era
   falseable igual (GHSA-3m5p-2c4r-xxw2). Por eso `package.json` fuerza
   `overrides.fastify` — el adapter de NestJS arrastraba un fastify anterior.
 
-Con un CDN por delante (Cloudflare y similares) hay que **añadir sus rangos**
-a `TRUST_PROXY`, o el rate limit contará a todos sus nodos como un cliente.
-
-Comprobación tras desplegar: pedir varias veces a través del proxy con
+Si `TRUSTED_PROXY_CIDR` no coincide con la subred real de Traefik, todo el
+mundo tendrá la IP de Traefik y el rate limit contará a todos como un
+cliente. Comprobación tras desplegar: pedir con
 `curl -H 'X-Forwarded-For: 1.2.3.4' https://.../api/...` y verificar en los
-logs de pino que la IP registrada es la real, no `1.2.3.4`.
+logs de pino que la IP registrada es la real, no `1.2.3.4` ni la de Traefik.
 
-### Correo transaccional (Stalwart)
+### Correo transaccional
 
-La recuperación de contraseña envía el código por SMTP al Stalwart del
-servidor. El backend se une a la red Docker externa del correo
-(`MAIL_NETWORK`) y se conecta a `SMTP_HOST=stalwart` por el 587 con STARTTLS
-(`requireTLS`: aborta si el servidor no lo ofrece, en vez de mandar las
-credenciales en claro).
+La recuperación de contraseña envía el código por SMTP al servidor de correo
+de la plataforma (`SMTP_HOST`, puerto 465 con TLS implícito). Con STARTTLS
+(587, `SMTP_SECURE=false`) se usa `requireTLS`: aborta si el servidor no lo
+ofrece, en vez de mandar las credenciales en claro.
 
-**Solo transaccional.** Las campañas siguen yendo por Listmonk, con otra
-identidad de envío. Meter los códigos de recuperación por Listmonk sería un
-error: necesita a cada destinatario dado de alta como *suscriptor* (mezcla la
-base de personas y sus consentimientos), comparte reputación con los
-boletines, y añade un salto extra en la ruta más crítica de la app.
+**Solo transaccional.** Las campañas van por Listmonk, con otra identidad de
+envío. Meter los códigos de recuperación por Listmonk sería un error:
+necesita a cada destinatario dado de alta como *suscriptor* (mezcla la base de
+personas y sus consentimientos), comparte reputación con los boletines, y
+añade un salto extra en la ruta más crítica de la app.
 
-Lo que de verdad decide si la función sirve no es el código, es que el correo
-llegue. Antes de dar por buena la recuperación, verificar:
+### Forma de trabajo
 
-- **SPF, DKIM y DMARC** publicados en el DNS (Stalwart firma DKIM si se
-  configura, pero los registros se publican aparte).
-- **PTR (rDNS)** de la IP del VPS apuntando al dominio de correo.
-- **Salida por el puerto 25**: Hetzner, DigitalOcean y OVH lo bloquean por
-  defecto y hay que pedir que lo abran.
-- Entrega real a **Gmail y Outlook**, no solo a una cuenta del propio dominio:
-  las IP de VPS recién estrenadas arrancan sin reputación.
-
-Si la entrega directa resulta mala, la mitigación es configurar un *smarthost*
-en Stalwart. El backend habla SMTP genérico a propósito, así que ese cambio no
-toca código.
-
-### Secretos
-
-`.env.prod` lo genera Ansible desde plantilla, con los valores marcados
-`[vault]` en `.env.prod.example` cifrados en Ansible Vault. Nunca se copia a
-mano ni se versiona (`chmod 600`).
-
-### Pendiente fuera de este repo
-
-- **Backup de PostgreSQL**: `pg_dump` programado del volumen `pgdata_prod`.
-  Hoy es un punto único de pérdida.
+- `main` solo cambia por PR con la aprobación de la plataforma; un push nuevo
+  al PR anula la aprobación. Sin force push ni borrado de `main`.
+- Cada persona entra con su propio usuario de GitHub; nada de cuentas
+  compartidas.
+- La plataforma se encarga de la app en Coolify, los secretos, el correo, el
+  DNS, Listmonk, la analítica y las copias de PostgreSQL.
 
 ## Endurecimiento (dev y prod)
 
@@ -253,11 +263,13 @@ mano ni se versiona (`chmod 600`).
 - **Dev solo en loopback** (`127.0.0.1:6060/:5173/:3001/:5432`, nada a la LAN),
   código montado de solo lectura (`:ro`) y nginx tolerante a reinicios del
   `vite dev` (resolver Docker + upstreams por variable).
-- **Límites en prod**: backend 1G/2 CPU, db 768M, nginx 128M. Logs rotados
-  (`10m × 3`) en ambos entornos. Imágenes pineadas (`node:24.20-alpine`,
-  `nginx:1.31-alpine`, `postgres:16-alpine`) y `.dockerignore` por contexto
-  (nada de `node_modules`, `dist` ni `.env` dentro de las imágenes).
-- Nginx prod: `server_tokens off`, **CSP** + `nosniff`/`SAMEORIGIN`/
+- **Límites en prod** (`mem_limit` en todos los servicios): backend 1G/2 CPU,
+  db 768M/1 CPU, nginx 128M/0,5 CPU. Logs rotados (`10m × 3`) en ambos
+  entornos. Imágenes pineadas (`node:24.21-alpine`, `nginx:1.31-alpine`,
+  `postgres:16-alpine` en dev y `postgres:18-alpine` en prod) y
+  `.dockerignore` por contexto (nada de `node_modules`, `dist` ni `.env`
+  dentro de las imágenes).
+- Nginx prod: `server_tokens off`, **HSTS**, **CSP** + `nosniff`/`SAMEORIGIN`/
   `Referrer-Policy`/`Permissions-Policy`/`COOP` (en `nginx/security-headers.conf`,
   incluido en cada `location` porque nginx solo hereda `add_header` si el
   bloque hijo no define ninguna), gzip y caché larga solo en `/assets/`
@@ -278,6 +290,7 @@ mano ni se versiona (`chmod 600`).
 
 ```bash
 # DEV (hot-reload): entrada única http://localhost:6060
+cp .env.example .env.dev    # la primera vez (.env.dev no se versiona)
 docker compose --env-file .env.dev up --build
 # PostgreSQL directo: localhost:5432 (msm / myschoolmyparents)
 # API directa:        http://localhost:3001/api/health
@@ -297,12 +310,12 @@ usando los `node_modules` viejos y el paquete nuevo "no existe" aunque la
 imagen sí lo traiga. No uses `down -v` para esto: borraría también `pgdata`
 con tus datos locales.
 
-Variables de `.env.dev` / `.env.prod`: `POSTGRES_PASSWORD`, `JWT_SECRET`,
+Variables de `.env.dev`: `POSTGRES_PASSWORD`, `JWT_SECRET`,
 `JWT_EXPIRES_IN`, `CORS_ORIGIN`, `LOG_LEVEL`, `TRUST_PROXY`, `APP_PUBLIC_URL`,
 `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`,
-`SMTP_FROM`, `MAIL_NETWORK` (solo prod), `VITE_AUTH_API_URL`,
-`VITE_GOOGLE_CLIENT_ID`. La plantilla comentada está en `.env.example`; el
-contrato de producción, en `.env.prod.example`.
+`SMTP_FROM`, `VITE_AUTH_API_URL`, `VITE_GOOGLE_CLIENT_ID`. La plantilla
+comentada está en `.env.example`; las de producción, en *Variables de la
+plataforma*.
 
 Desarrollo sin Docker:
 
