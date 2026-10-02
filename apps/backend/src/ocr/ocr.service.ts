@@ -1,6 +1,14 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  OnModuleInit,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { copyFileSync, existsSync } from 'fs';
+import { imageSize } from 'image-size';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import * as Tesseract from 'tesseract.js';
@@ -12,9 +20,33 @@ import { OcrRequest } from './ocr-request.entity';
 const BAKED_TESSDATA = '/app/tessdata';
 const LANGS = ['eng', 'spa'];
 
+/**
+ * Tope de tamaño en píxeles, comprobado leyendo solo la cabecera. Los 15 MB
+ * de subida no bastan: un PNG de 15 MB puede descomprimirse en varios GB y
+ * el contenedor tiene 1 GB. La web ya reduce a 2000 px por lado antes de
+ * enviar, así que esto deja mucho margen.
+ */
+const MAX_SIDE_PX = 10_000;
+const MAX_PIXELS = 40_000_000;
+/** Lo que image-size dice haber leído, contra los MIME que admite el controlador. */
+const ALLOWED_TYPES = new Set(['jpg', 'png', 'webp', 'bmp', 'tiff']);
+
+/**
+ * Cada OCR arranca un worker de Tesseract con su propia memoria. Sin tope,
+ * unas cuantas peticiones a la vez agotaban el 1 GB del contenedor y lo
+ * tumbaban entero, login incluido.
+ */
+const MAX_CONCURRENT = 2;
+/** Peticiones en espera; por encima se responde 503 en vez de acumular imágenes en memoria. */
+const MAX_QUEUED = 8;
+
 @Injectable()
 export class OcrService implements OnModuleInit {
   private readonly cachePath = tmpdir();
+  private running = 0;
+  private readonly waiting: Array<() => void> = [];
+  /** Usuarios con un OCR en curso o en cola: uno por cuenta a la vez. */
+  private readonly busyUsers = new Set<string>();
 
   constructor(
     @InjectRepository(OcrRequest) private readonly repo: Repository<OcrRequest>,
@@ -65,7 +97,64 @@ export class OcrService implements OnModuleInit {
     return 'eng';
   }
 
-  async recognize(image: Buffer, langReq: string) {
+  /** Rechaza lo que no sea una imagen de verdad o sea demasiado grande, sin decodificarla. */
+  assertImageSize(image: Buffer) {
+    let info: { type?: string; width?: number; height?: number };
+    try {
+      info = imageSize(image);
+    } catch {
+      throw new BadRequestException('No se pudo leer la imagen. Envía un JPEG, PNG, WebP, BMP o TIFF válido.');
+    }
+    if (!info.type || !ALLOWED_TYPES.has(info.type)) {
+      throw new BadRequestException('El fichero debe ser una imagen (JPEG, PNG, WebP, BMP o TIFF).');
+    }
+    const width = info.width ?? 0;
+    const height = info.height ?? 0;
+    if (!width || !height || width > MAX_SIDE_PX || height > MAX_SIDE_PX || width * height > MAX_PIXELS) {
+      throw new BadRequestException(
+        `La imagen es demasiado grande (${width}×${height} px). Redúcela a menos de ${MAX_SIDE_PX} px por lado.`,
+      );
+    }
+  }
+
+  private acquire(): Promise<void> {
+    if (this.running < MAX_CONCURRENT) {
+      this.running += 1;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => this.waiting.push(resolve));
+  }
+
+  /** Cede el hueco al siguiente en cola (sin bajar `running`) o lo libera. */
+  private release() {
+    const next = this.waiting.shift();
+    if (next) next();
+    else this.running -= 1;
+  }
+
+  async recognize(image: Buffer, langReq: string, userId: string) {
+    this.assertImageSize(image);
+    if (this.busyUsers.has(userId)) {
+      throw new HttpException('Ya tienes una imagen en proceso. Espera a que termine.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+    if (this.running >= MAX_CONCURRENT && this.waiting.length >= MAX_QUEUED) {
+      this.logger.warn({ running: this.running, queued: this.waiting.length }, 'ocr cola llena');
+      throw new ServiceUnavailableException('El reconocimiento de texto está ocupado. Inténtalo en unos segundos.');
+    }
+    this.busyUsers.add(userId);
+    try {
+      await this.acquire();
+      try {
+        return await this.run(image, langReq);
+      } finally {
+        this.release();
+      }
+    } finally {
+      this.busyUsers.delete(userId);
+    }
+  }
+
+  private async run(image: Buffer, langReq: string) {
     const lang = this.normalizeLang(langReq);
     // El .traineddata se cachea en el tmp del sistema, nunca en /app:
     // así el contenedor de prod puede correr con filesystem de solo lectura.
