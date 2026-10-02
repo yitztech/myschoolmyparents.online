@@ -16,5 +16,28 @@ export function apkNames(version, build) {
   };
 }
 
+/**
+ * IPA de iOS sin firmar (para firmar con AltStore o Sideloadly mientras no haya
+ * cuenta de desarrollador de Apple). El sufijo lo deja claro en el propio nombre.
+ */
+export function ipaNames(version, build) {
+  const { full, friendly } = apkNames(version, build);
+  return {
+    full: full.replace(/\.apk$/, '-sin-firmar.ipa'),
+    friendly: friendly.replace(/\.apk$/, '-sin-firmar.ipa'),
+  };
+}
+
+/**
+ * Alias fijos de la última versión: GitHub solo sirve
+ * releases/latest/download/<archivo> con un nombre que no cambie, y es lo que
+ * enlaza /descargas/<plataforma> en la web. Llevan la plataforma, nunca son
+ * genéricos, y la versión exacta sigue en los otros nombres y en la web.
+ */
+export const LATEST_NAMES = {
+  android: `${APP_FILE_PREFIX}-android.apk`,
+  ios: `${APP_FILE_PREFIX}-ios-sin-firmar.ipa`,
+};
+
 const GENERIC = /^(app-(release|debug)|runner)\.(apk|ipa|aab)$/i;
 export const isGenericInstallerName = (name) => GENERIC.test(name);

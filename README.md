@@ -18,7 +18,7 @@ e2e/          Pruebas end-to-end (Playwright), paquete npm aparte
 .github/workflows/
   ci.yml             web (build + lint) y móvil (tipos + pruebas), según lo que cambie
   mobile.yml         OTA (EAS Update) o build de tienda cuando cambia apps/mobile en main
-  mobile-release.yml APK en GitHub Releases al subir un tag vX.Y.Z (nombres oficiales)
+  mobile-release.yml instaladores directos (APK firmado + IPA sin firmar) en GitHub Releases, a mano
 scripts/             versión móvil, impacto OTA/tienda y publicación de APK
 docs/                REGLAS-DEL-PROYECTO, ARQUITECTURA-MOVIL, ADR, y flutter-legacy/ (archivo histórico)
 ```
@@ -106,6 +106,39 @@ Réplica web de la app MyParentMyChildren (Flutter) con **React + shadcn + Docke
   Conexión por `DATABASE_URL` o, si no viene, por `DB_HOST`/`DB_PORT`/`DB_USER`/
   `DB_PASSWORD`/`DB_NAME` (así la usa producción: la contraseña generada puede
   llevar caracteres que romperían una URL escrita a mano).
+
+## Páginas legales y descargas
+
+Páginas públicas (se ven sin iniciar sesión) que enlazan las apps y, en el futuro, las fichas de las
+tiendas. **Sus URL no deben cambiar**:
+
+| URL | Contenido |
+|---|---|
+| `/legal/privacidad` | Política de privacidad (web y apps) |
+| `/legal/terminos` | Términos y condiciones de uso |
+| `/legal/cookies` | Cookies y almacenamiento local (no hay cookies) |
+| `/legal/eliminar-cuenta` | Eliminación de la cuenta: con sesión se hace ahí mismo (`POST /api/auth/account/delete`, pide la contraseña). Lo exigen Google Play y App Store |
+| `/descargas` | Instaladores de Android (APK firmado) e iOS (IPA sin firmar), sin cuenta |
+
+Los textos legales son **borradores** (`apps/frontend/src/components/legal/`). Los datos del titular, el
+correo de privacidad, la ley aplicable y los plazos están en `apps/frontend/src/legal/site.ts`: mientras
+valgan `null` se muestran como «[pendiente: …]» y la página avisa de que es un borrador. Cada afirmación
+sobre datos describe lo que hace el código: si cambia (nuevos servicios, sincronización en la nube…), hay
+que cambiar la política. Las apps enlazan las mismas URL desde el acceso, el registro y «Acerca de».
+
+**Descargas.** `/descargas/android` y `/descargas/ios` redirigen (nginx, 302) al alias fijo del último
+release de GitHub. Se miden de tres formas, sin cookies:
+
+- Umami: cada clic en un botón de descarga es un evento `descarga` con `plataforma` y `version`.
+- Los registros de nginx cuentan las peticiones a `/descargas/<plataforma>`, también si el enlace se comparte.
+- GitHub cuenta las descargas de cada archivo:
+
+  ```bash
+  gh api repos/yitztech/myschoolmyparents.online/releases \
+    --jq '.[] | .tag_name as $t | .assets[] | "\($t) \(.name) \(.download_count)"'
+  ```
+
+La versión que muestra la página sale de `apps/mobile/app.json` al compilar la web.
 
 ## Cuentas: login, registro y recuperación
 

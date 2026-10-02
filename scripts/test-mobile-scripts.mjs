@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { apkNames, isGenericInstallerName } from './lib/installer-names.mjs';
+import { apkNames, ipaNames, isGenericInstallerName, LATEST_NAMES } from './lib/installer-names.mjs';
 import { classify } from './mobile-impact.mjs';
 import { readMobileVersion } from './mobile-version.mjs';
 
@@ -11,6 +11,16 @@ test('nombres oficiales de instalador', () => {
   });
   assert.throws(() => apkNames('0.3', 5), /Versión inválida/);
   assert.throws(() => apkNames('0.3.0', 'x'), /compilación inválido/);
+});
+
+test('IPA sin firmar y alias de la última versión', () => {
+  assert.deepEqual(ipaNames('0.4.0', 6), {
+    full: 'MySchoolMyParents-Online-v0.4.0+6-sin-firmar.ipa',
+    friendly: 'MySchoolMyParents-Online-v0.4.0-sin-firmar.ipa',
+  });
+  assert.equal(LATEST_NAMES.android, 'MySchoolMyParents-Online-android.apk');
+  assert.equal(LATEST_NAMES.ios, 'MySchoolMyParents-Online-ios-sin-firmar.ipa');
+  for (const n of Object.values(LATEST_NAMES)) assert.ok(!isGenericInstallerName(n), n);
 });
 
 test('detecta nombres genéricos prohibidos', () => {

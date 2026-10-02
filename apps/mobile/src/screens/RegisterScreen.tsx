@@ -6,6 +6,7 @@ import { AppText, Banner, Button, TextField } from '../components/ui';
 import { useApp } from '../context/AppContext';
 import { AuthError } from '../services/auth';
 import { validateConfirmPassword, validateEmail, validateName, validatePassword } from '../lib/validators';
+import { AcceptTerms } from '../components/LegalLinks';
 import type { AuthStackParams } from '../navigation/types';
 
 export function RegisterScreen({ navigation }: NativeStackScreenProps<AuthStackParams, 'Register'>) {
@@ -78,6 +79,7 @@ export function RegisterScreen({ navigation }: NativeStackScreenProps<AuthStackP
         onSubmitEditing={submit}
       />
       <Button label="Crear cuenta" busy={busy} onPress={submit} />
+      <AcceptTerms />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
         <AppText>¿Ya tienes cuenta?</AppText>
         <Button label="Iniciar sesión" variant="text" compact disabled={busy} onPress={() => navigation.goBack()} />

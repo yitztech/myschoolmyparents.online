@@ -2,7 +2,7 @@
   "expo": {
     "name": "MySchoolMyParents Online",
     "slug": "myschoolmyparents",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -10,30 +10,45 @@
     "scheme": "myschoolmyparents",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "online.myschoolmyparents",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "online.myschoolmyparents",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1d4ed8"
       },
-      "permissions": ["CAMERA", "INTERNET"]
+      "permissions": [
+        "CAMERA",
+        "INTERNET"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "single"
     },
     "plugins": [
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       "expo-sqlite",
       [
         "expo-image-picker",
@@ -54,7 +69,10 @@
       [
         "expo-font",
         {
-          "fonts": ["./assets/fonts/Nunito.ttf", "./assets/fonts/Nunito-Italic.ttf"]
+          "fonts": [
+            "./assets/fonts/Nunito.ttf",
+            "./assets/fonts/Nunito-Italic.ttf"
+          ]
         }
       ],
       "expo-sharing"
