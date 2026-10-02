@@ -1,15 +1,35 @@
-# ─── PROD (myschoolmyparents.online) ───
+# ─── PROD (myschoolmyparents.online, Coolify) ───
 # Sirve los estáticos del build Vite (horneados en la imagen por
-# nginx/Dockerfile.prod) y proxea /api/ al backend.
+# infra/nginx/Dockerfile.prod), /version.json, y proxea /api/ al backend.
 #
-# Este nginx escucha en :80 y solo se publica en 127.0.0.1: la entrada real
-# es el reverse proxy del host (Caddy/Traefik), que termina el TLS y es
-# quien debe poner HSTS, el redirect 80->443 y la validación del Host.
+# Delante está el proxy de la plataforma (Traefik), que termina el TLS y
+# redirige http → https; este nginx escucha en HTTP (80) y es el único
+# servicio del compose que recibe tráfico.
+#
+# Es una PLANTILLA: el entrypoint de nginx sustituye ${TRUSTED_PROXY_CIDR} y
+# ${RELEASE_SHA} al arrancar (y solo esas, ver NGINX_ENVSUBST_FILTER en el
+# Dockerfile) y escribe el resultado en /etc/nginx/conf.d.
+
+server_tokens off;
+
+# ── IP real del cliente ──
+# Solo se acepta X-Forwarded-For si llega desde la subred de Traefik. Sin
+# esto, todo el mundo tendría la IP de Traefik y el rate limit del backend
+# los contaría como un único cliente.
+set_real_ip_from ${TRUSTED_PROXY_CIDR};
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
+
+# Protocolo original: Traefik ya terminó el TLS, así que aquí $scheme
+# siempre es "http".
+map $http_x_forwarded_proto $forwarded_proto {
+  default $scheme;
+  https https;
+}
+
 server {
   listen 80;
-  server_name myschoolmyparents.online www.myschoolmyparents.online;
-
-  server_tokens off;
+  server_name _;
 
   root /usr/share/nginx/html;
   index index.html;
@@ -30,6 +50,15 @@ server {
     access_log off;
     add_header Content-Type text/plain always;
     return 200 "ok\n";
+  }
+
+  # Commit desplegado: el workflow de despliegue espera a ver aquí el SHA
+  # nuevo para dar el despliegue por terminado.
+  location = /version.json {
+    access_log off;
+    default_type application/json;
+    add_header Cache-Control "no-store" always;
+    return 200 '{"revision":"${RELEASE_SHA}"}';
   }
 
   # Assets con hash: caché larga e inmutable.
@@ -65,11 +94,10 @@ server {
     proxy_pass http://backend:3001;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
-    # Se AÑADE (no se sobrescribe) a lo que venga del proxy del host: el
-    # backend confía solo en los rangos privados y corta en la primera IP
-    # pública, que es la del cliente real. Ver TRUST_PROXY en .env.example.
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    # Se SOBRESCRIBE con la IP real ya resuelta arriba (no se concatena):
+    # así el cliente no puede colar IPs falsas en X-Forwarded-For.
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $forwarded_proto;
     proxy_read_timeout 120s;
   }
 }

@@ -14,20 +14,10 @@ apps/frontend/dist/
 apps/backend/*.tsbuildinfo
 apps/frontend/*.tsbuildinfo
 
-# ——— Env / secretos (se versiona .env.example, .env.dev y *.example) ———
-.env
-.env.local
-.env.*.local
-.env.prod
-!apps/backend/.env.example
-!.env.example
-!.env.dev
-!.env.prod.example
-apps/frontend/.env
-apps/frontend/.env.local
-apps/frontend/.env.*.local
-!apps/frontend/.env.example
-apps/backend/.env
+# ——— Env / secretos: ningún .env se versiona, salvo las plantillas *.example ———
+# (en cualquier carpeta; producción no usa .env: las variables las pone Coolify)
+.env*
+!.env*.example
 
 # ——— Logs ———
 logs/

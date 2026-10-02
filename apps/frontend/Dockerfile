@@ -5,7 +5,7 @@
 #         Corre como usuario `node` (no root).
 #   prod: build estático. En prod real lo construye nginx/Dockerfile.prod;
 #         este stage sirve para inspeccionar el build (`docker build --target prod`).
-FROM node:24.20-alpine AS base
+FROM node:24.21-alpine AS base
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci && npm cache clean --force && chown -R node:node /app

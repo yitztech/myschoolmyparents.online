@@ -1,6 +1,6 @@
 # Contexto RAÍZ: solo lo usa nginx/Dockerfile.prod (construye el frontend).
 # Todo lo demás queda fuera del contexto: builds más rápidos y ningún
-# secreto (.env.prod) ni node_modules viaja al daemon.
+# .env ni node_modules viaja al daemon.
 .git/
 apps/backend/
 # Tests end-to-end: paquete npm aparte, no entra en ninguna imagen ni debe

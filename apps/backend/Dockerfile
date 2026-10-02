@@ -3,7 +3,7 @@
 #   dev:  `nest start --watch` (hot-reload; el src se monta por volumen).
 #   prod: compila TypeScript y arranca solo con dependencias prod.
 # El runtime corre como usuario `node` (no root).
-FROM node:24.20-alpine AS base
+FROM node:24.21-alpine AS base
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci && npm cache clean --force && chown -R node:node /app
@@ -12,7 +12,7 @@ RUN npm ci && npm cache clean --force && chown -R node:node /app
 # tmpfs, así que se pierde en cada arranque. Si la descarga falla, la imagen
 # se construye igual y tesseract.js cae a su descarga en runtime.
 #
-# La variante es la misma que usa tesseract.js v5 por defecto
+# La variante es la misma que usa tesseract.js v7 por defecto
 # (ver node_modules/tesseract.js/src/worker-script/index.js): `4.0.0_best_int`,
 # solo LSTM. La variante `4.0.0` a secas incluye además el motor Legacy, que
 # esta app no usa, y pesa seis veces más (41 MB frente a 8 MB en la imagen).
@@ -34,7 +34,7 @@ CMD ["npm", "run", "start:dev"]
 FROM base AS build
 RUN npm run build
 
-FROM node:24.20-alpine AS prod
+FROM node:24.21-alpine AS prod
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json* ./

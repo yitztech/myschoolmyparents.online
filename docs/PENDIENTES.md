@@ -30,8 +30,10 @@ scripts, `tsc` y `expo-doctor` limpios, Metro empaqueta Android e iOS.
 
 ## Entorno y repo
 
-- [ ] Copiar/revisar a mano los `.env*` (no se leyó su contenido; `.env.dev` está versionado): comprobar que no
-      llevan secretos reales. Falta `.env.prod` (ignorado).
+- [x] Ningún `.env` se versiona (salvo las plantillas `*.example`). Los valores del antiguo `.env.dev` siguen en
+      el historial de un repo público: son de juguete y no deben usarse fuera de desarrollo.
+- [ ] Producción en Coolify: tras el primer push a `main`, comprobar que `deploy.yml` publicó
+      `myschoolmyparents.online-backend` y `-nginx` en GHCR y pedir el despliegue a la plataforma.
 - [ ] Probar `docker compose up` y el build web en el monorepo (solo se compilaron backend y frontend).
 - [ ] Borrar el directorio original `MySchoolMyParentsOnline/` y los repos `flutter-app` y `site` cuando se dé por
       buena la migración.
