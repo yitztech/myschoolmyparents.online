@@ -12,7 +12,7 @@ RUN npm ci && npm cache clean --force && chown -R node:node /app
 # tmpfs, así que se pierde en cada arranque. Si la descarga falla, la imagen
 # se construye igual y tesseract.js cae a su descarga en runtime.
 #
-# La variante es la misma que usa tesseract.js v5 por defecto
+# La variante es la misma que usa tesseract.js v7 por defecto
 # (ver node_modules/tesseract.js/src/worker-script/index.js): `4.0.0_best_int`,
 # solo LSTM. La variante `4.0.0` a secas incluye además el motor Legacy, que
 # esta app no usa, y pesa seis veces más (41 MB frente a 8 MB en la imagen).

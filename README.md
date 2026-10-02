@@ -28,6 +28,16 @@ Comandos desde la raíz: `npm run up` (web con Docker), `npm run build`, `npm ru
 Cada app mantiene su propio `package-lock.json` (sin workspaces),
 porque las imágenes Docker se construyen por aplicación.
 
+Todo va en su última versión estable. Excepciones, por estar atadas a otra
+pieza (se usa la última compatible):
+
+- **TypeScript 6** en el backend (Nest CLI 12 necesita la API del compilador,
+  que TypeScript 7 no trae hasta la 7.1) y en la app (el SDK 57 de Expo pide
+  `~6.0.3`). El frontend usa TypeScript 7.
+- **`@types/node` 24**: va con el runtime, Node 24 LTS.
+- **App móvil**: las versiones que fija el SDK de Expo (`npx expo install --check`),
+  con `@types/react` 19.2 y `@babel/core` 7 a juego.
+
 La app y la web comparten el contrato HTTP del backend (`/api/auth`, `/api/ocr`,
 `/api/v1/sync`); un cambio de contrato va en un solo commit que toque ambos lados.
 
@@ -148,7 +158,7 @@ el código de recuperación sale por los logs del backend
 | Frontend | `vite dev` con HMR (`frontend:5173`) | estáticos Vite horneados en nginx (sin Node en prod) |
 | Backend | `nest start --watch`, logs legibles | `node dist/main.js`, logs JSON |
 | Puertos | `:6060` (nginx), `:5173` (vite), `:3001` (api), `:5432` (db), solo en loopback | ninguno: Traefik → `nginx:80` |
-| PostgreSQL | `postgres:16-alpine`, volumen `pgdata` | `postgres:18-alpine`, volumen `pgdata` en `/var/lib/postgresql` |
+| PostgreSQL | `postgres:18-alpine`, volumen `pgdata18` | `postgres:18-alpine`, volumen `pgdata` |
 | Variables | `.env.dev`, copiado de `.env.example` (ignorado por git) | las inyecta Coolify; ningún `.env` |
 | CORS | localhost + dominio OrbStack | `SITE_URL` |
 
@@ -266,7 +276,7 @@ añade un salto extra en la ruta más crítica de la app.
 - **Límites en prod** (`mem_limit` en todos los servicios): backend 1G/2 CPU,
   db 768M/1 CPU, nginx 128M/0,5 CPU. Logs rotados (`10m × 3`) en ambos
   entornos. Imágenes pineadas (`node:24.21-alpine`, `nginx:1.31-alpine`,
-  `postgres:16-alpine` en dev y `postgres:18-alpine` en prod) y
+  `postgres:18-alpine`) y
   `.dockerignore` por contexto (nada de `node_modules`, `dist` ni `.env`
   dentro de las imágenes).
 - Nginx prod: `server_tokens off`, **HSTS**, **CSP** + `nosniff`/`SAMEORIGIN`/
@@ -282,7 +292,7 @@ añade un salto extra en la ruta más crítica de la app.
   sembrados en el cache al arrancar (`OcrService.onModuleInit`). Sin esto, el
   primer OCR tras cada reinicio los bajaba de un CDN externo, porque el cache
   vive en un tmpfs. La variante es `4.0.0_best_int`, la misma que usa
-  tesseract.js v5 por defecto: la `4.0.0` a secas añade el motor Legacy, que
+  tesseract.js v7 por defecto: la `4.0.0` a secas añade el motor Legacy, que
   esta app no usa, y pesa seis veces más. Si la descarga falla en el build, la
   imagen se construye igual y se cae al comportamiento anterior.
 
@@ -307,7 +317,7 @@ El compose monta `/app/node_modules` como volumen anónimo para que el
 bind-mount del código no tape los módulos de la imagen. Ese volumen
 **sobrevive a los rebuilds**, así que sin renovarlo el contenedor sigue
 usando los `node_modules` viejos y el paquete nuevo "no existe" aunque la
-imagen sí lo traiga. No uses `down -v` para esto: borraría también `pgdata`
+imagen sí lo traiga. No uses `down -v` para esto: borraría también `pgdata18`
 con tus datos locales.
 
 Variables de `.env.dev`: `POSTGRES_PASSWORD`, `JWT_SECRET`,

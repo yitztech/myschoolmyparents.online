@@ -12,7 +12,9 @@ name: my-school-my-parents
 #   estáticos van horneados en la imagen nginx (infra/nginx/Dockerfile.prod).
 # - Redes: `public` (nginx/frontend/backend) y `db-net` (backend/db). La base
 #   de datos NO es alcanzable desde nginx ni desde el frontend.
-# - `pgdata` conserva los datos locales de desarrollo.
+# - `pgdata18` conserva los datos locales de desarrollo (PostgreSQL 18). El
+#   volumen `pgdata` de la 16 ya no se usa: los formatos no son compatibles.
+#   Si no necesitas esos datos: docker volume rm my-school-my-parents_pgdata
 
 x-logging: &log
   driver: json-file
@@ -29,7 +31,7 @@ networks:
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: msm-db
     networks:
       - db-net
@@ -38,7 +40,9 @@ services:
       POSTGRES_USER: msm
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD (cp .env.example .env.dev y usa --env-file .env.dev)}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # PostgreSQL 18 guarda los datos en un subdirectorio por versión, así
+      # que el volumen se monta en /var/lib/postgresql (no en .../data).
+      - pgdata18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U msm -d myschoolmyparents"]
       interval: 5s
@@ -141,5 +145,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  # Desarrollo local (reutiliza los datos que ya tenías).
-  pgdata:
+  # Desarrollo local con PostgreSQL 18.
+  pgdata18:
