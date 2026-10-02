@@ -397,7 +397,8 @@ export class AppDatabase {
     });
   }
 
-  async deletePage(pageId: string) {
+  /** `keepFile` evita borrar una imagen que se reutiliza (p. ej. la portada al unir borradores). */
+  async deletePage(pageId: string, opts: { keepFile?: string | null } = {}) {
     const r = await this.first('SELECT * FROM pages WHERE id = ?', pageId);
     if (!r) return;
     const page = mapPage(r);
@@ -413,8 +414,9 @@ export class AppDatabase {
       await this.renormalizeParagraphs(page.bookId);
       await this.db.runAsync('UPDATE books SET updated_at = ? WHERE id = ?', [Date.now(), page.bookId]);
     });
-    this.deleteFile(page.originalPath);
-    this.deleteFile(page.derivedPath);
+    for (const f of new Set([page.originalPath, page.derivedPath])) {
+      if (f && f !== opts.keepFile) this.deleteFile(f);
+    }
   }
 
   async deleteBook(id: string) {
