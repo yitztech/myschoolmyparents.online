@@ -55,6 +55,8 @@ jobs:
       - run: npm run build --prefix apps/backend
       - run: npm run lint --prefix apps/frontend
       - run: npm run build --prefix apps/frontend
+        env:
+          VITE_AUTH_API_URL: /api
 
   mobile:
     name: Móvil · análisis y pruebas

@@ -11,7 +11,7 @@
     "logs": "docker compose logs -f",
     "ps": "docker compose ps",
     "install:all": "npm ci --prefix apps/backend && npm ci --prefix apps/frontend && npm ci --prefix e2e",
-    "build": "npm run build --prefix apps/backend && npm run build --prefix apps/frontend",
+    "build": "npm run build --prefix apps/backend && VITE_AUTH_API_URL=/api npm run build --prefix apps/frontend",
     "lint": "npm run lint --prefix apps/frontend",
     "test:e2e": "npm test --prefix e2e",
     "mobile:get": "apps/mobile/scripts/flutterw pub get",
