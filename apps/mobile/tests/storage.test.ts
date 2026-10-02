@@ -108,3 +108,11 @@ test('notifica a los suscriptores solo al terminar la transacción', async () =>
   await db.createQueuedPage({ bookId: 'b1', pageId: 'p1', jobId: 'j1', imagePath: null });
   assert.equal(calls, 1);
 });
+
+test('estadísticas por libro para la biblioteca', async () => {
+  const { db } = await seedBook();
+  await db.createBook({ id: 'b2', title: 'Vacío' });
+  await db.addPageWithParagraphs({ bookId: 'b1', pageId: 'pa', imagePath: null, texts: ['A', 'B'] });
+  for (const d of await db.listDrafts('b1')) await db.approveDraft(d, JSON.parse(d.paragraphsJson));
+  assert.deepEqual(await db.bookStats(), { b1: { pages: 1, paragraphs: 2 } });
+});

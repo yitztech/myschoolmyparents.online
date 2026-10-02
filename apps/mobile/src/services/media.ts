@@ -1,5 +1,6 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import { Image } from 'react-native';
+import { Asset } from 'expo-asset';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { buildImageActions, isIdentityTransform, type ImageTransformOptions } from '../lib/imageTransform';
@@ -75,4 +76,12 @@ export async function recoverLostPhotos(): Promise<string[]> {
     // no hay nada que recuperar
   }
   return [];
+}
+
+/** Copia al almacenamiento privado la página de ejemplo incluida en la app («Usar ejemplo»). */
+export async function sampleImage(): Promise<string> {
+  const asset = Asset.fromModule(require('../../assets/sample/learning_page.png'));
+  await asset.downloadAsync();
+  if (!asset.localUri) throw new Error('No se pudo cargar la página de ejemplo.');
+  return persistImage(asset.localUri);
 }

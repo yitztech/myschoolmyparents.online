@@ -133,6 +133,17 @@ export class AppDatabase {
   async listBooks(): Promise<Book[]> {
     return (await this.all('SELECT * FROM books ORDER BY updated_at DESC')).map(mapBook);
   }
+  /** Páginas aprobadas y párrafos por libro, para las tarjetas de la biblioteca. */
+  async bookStats(): Promise<Record<string, { pages: number; paragraphs: number }>> {
+    const stats: Record<string, { pages: number; paragraphs: number }> = {};
+    for (const r of await this.all("SELECT book_id, COUNT(*) AS n FROM pages WHERE status = 'approved' GROUP BY book_id")) {
+      stats[r.book_id] = { pages: r.n, paragraphs: 0 };
+    }
+    for (const r of await this.all('SELECT book_id, COUNT(*) AS n FROM paragraphs GROUP BY book_id')) {
+      (stats[r.book_id] ??= { pages: 0, paragraphs: 0 }).paragraphs = r.n;
+    }
+    return stats;
+  }
   async findBook(id: string): Promise<Book | null> {
     const r = await this.first('SELECT * FROM books WHERE id = ?', id);
     return r ? mapBook(r) : null;
