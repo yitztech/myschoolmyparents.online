@@ -3,6 +3,7 @@ import { Image, View } from 'react-native';
 import { AppText, Button, Dialog, Icon } from './ui';
 import { APP_NAME, displayVersion } from '../lib/appVersion';
 import { colors } from '../theme';
+import { LegalLinks } from './LegalLinks';
 
 /** Modal «Acerca de la app»: logotipo, nombre, versión, descripción y estado de sincronización. */
 export function AboutDialog({ visible, onClose, syncStatus }: { visible: boolean; onClose: () => void; syncStatus: string }) {
@@ -21,6 +22,7 @@ export function AboutDialog({ visible, onClose, syncStatus }: { visible: boolean
           <Icon name="sync" size={16} color={colors.muted} />
           <AppText style={{ fontSize: 12, fontWeight: '600', color: colors.textSoft }}>{syncStatus}</AppText>
         </View>
+        <LegalLinks withDelete />
       </View>
     </Dialog>
   );

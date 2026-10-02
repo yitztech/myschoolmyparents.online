@@ -1,25 +1,99 @@
-# APK de distribución directa al subir un tag vX.Y.Z: compila con EAS (perfil «direct»),
-# nombra el instalador con las reglas oficiales (docs/REGLAS-DEL-PROYECTO.md) y lo adjunta
-# a una GitHub Release. El tag debe coincidir con la versión de apps/mobile/app.json.
+# Instaladores directos de la app (sin tiendas) para usuarios avanzados:
+#   APK de Android firmado (scripts/build-android-direct.mjs, en Linux)
+#   IPA de iOS sin firmar   (scripts/build-ios-unsigned.mjs, en macOS)
+# y una GitHub Release v<versión> con los nombres oficiales (docs/REGLAS-DEL-PROYECTO.md)
+# más los alias fijos que enlaza https://myschoolmyparents.online/descargas.
 #
-# Requiere el secreto EXPO_TOKEN y que el proyecto esté vinculado (`npx eas init`).
-name: App móvil · APK
+# Se lanza a mano (Actions → «App móvil · instaladores» → Run workflow) desde main,
+# después de subir la versión en apps/mobile/app.json. No usa EAS: no hace falta
+# cuenta de Expo ni de las tiendas.
+#
+# Secretos (entorno `production`):
+#   ANDROID_RELEASE_KEYSTORE_BASE64  base64 de ~/.myschoolmyparents-secrets/android/release.keystore
+#   ANDROID_SIGNING_JSON             contenido de ~/.myschoolmyparents-secrets/android/signing.json
+# Tienen que ser SIEMPRE los mismos: con otra clave, Android no actualiza sobre
+# la versión instalada.
+name: App móvil · instaladores
 
 on:
-  push:
-    tags: ['v*.*.*']
   workflow_dispatch:
 
 concurrency:
-  group: mobile-apk-${{ github.ref }}
+  group: mobile-installers
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apk:
+  version:
+    name: Versión
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      build: ${{ steps.v.outputs.build }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: v
+        run: |
+          v=$(node scripts/mobile-version.mjs --json)
+          echo "version=$(echo "$v" | jq -r .version)" >> "$GITHUB_OUTPUT"
+          echo "build=$(echo "$v" | jq -r .build)" >> "$GITHUB_OUTPUT"
+      - name: La versión no puede estar ya publicada
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.v.outputs.version }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::La release $TAG ya existe. Sube la versión en apps/mobile/app.json."
+            exit 1
+          fi
+
+  android:
+    name: Android (APK firmado)
+    needs: version
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: npm ci --prefix apps/mobile --no-audit --no-fund
+      - name: Clave de firma
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          SIGNING: ${{ secrets.ANDROID_SIGNING_JSON }}
+        run: |
+          if [ -z "$KEYSTORE" ] || [ -z "$SIGNING" ]; then
+            echo "::error::Faltan ANDROID_RELEASE_KEYSTORE_BASE64 o ANDROID_SIGNING_JSON en el entorno production."
+            exit 1
+          fi
+          dir="$HOME/.myschoolmyparents-secrets/android"
+          mkdir -p "$dir" && chmod 700 "$dir"
+          echo "$KEYSTORE" | base64 --decode > "$dir/release.keystore"
+          printf '%s' "$SIGNING" > "$dir/signing.json"
+          chmod 600 "$dir"/*
+      - name: Compilar
+        run: node scripts/build-android-direct.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android
+          path: |
+            dist/*.apk
+            dist/android.json
+          if-no-files-found: error
+
+  ios:
+    name: iOS (IPA sin firmar)
+    needs: version
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -28,42 +102,40 @@ jobs:
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
       - run: npm ci --prefix apps/mobile --no-audit --no-fund
-
-      - name: Versión
-        id: version
-        run: |
-          v=$(node scripts/mobile-version.mjs --json)
-          echo "version=$(echo "$v" | jq -r .version)" >> "$GITHUB_OUTPUT"
-          echo "build=$(echo "$v" | jq -r .build)" >> "$GITHUB_OUTPUT"
-          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v$(echo "$v" | jq -r .version)" ]; then
-            echo "::error::El tag ${GITHUB_REF_NAME} no coincide con la versión de app.json ($(echo "$v" | jq -r .version))."
-            exit 1
-          fi
-
-      - uses: expo/expo-github-action@v9
+      - name: Compilar
+        run: node scripts/build-ios-unsigned.mjs
+      - uses: actions/upload-artifact@v7
         with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+          name: ios
+          path: |
+            dist/*.ipa
+            dist/ios.json
+          if-no-files-found: error
 
-      - name: Compilar APK (perfil direct)
-        working-directory: apps/mobile
-        run: eas build --platform android --profile direct --non-interactive --wait --json > "$RUNNER_TEMP/build.json"
-
-      - name: Descargar y renombrar según las reglas del proyecto
+  publicar:
+    name: Publicar release
+    needs: [version, android, ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Alias de la última versión y notas
         env:
-          VERSION: ${{ steps.version.outputs.version }}
-          BUILD: ${{ steps.version.outputs.build }}
-        run: |
-          url=$(jq -r '.[0].artifacts.buildUrl' "$RUNNER_TEMP/build.json")
-          mkdir -p dist
-          curl -fsSL "$url" -o "$RUNNER_TEMP/app.apk"
-          cp "$RUNNER_TEMP/app.apk" "dist/MySchoolMyParents-Online-v${VERSION}+${BUILD}.apk"
-          cp "$RUNNER_TEMP/app.apk" "dist/MySchoolMyParents-Online-v${VERSION}.apk"
-          ls -lh dist/
-
+          VERSION: ${{ needs.version.outputs.version }}
+          BUILD: ${{ needs.version.outputs.build }}
+        run: node scripts/release-notes.mjs dist > "$RUNNER_TEMP/notas.md"
       - uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('manual-apk-{0}', steps.version.outputs.version) }}
-          name: MySchoolMyParents Online v${{ steps.version.outputs.version }} (Build ${{ steps.version.outputs.build }})
-          prerelease: ${{ github.ref_type != 'tag' }}
-          files: dist/*.apk
+          tag_name: v${{ needs.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: MySchoolMyParents Online v${{ needs.version.outputs.version }} (compilación ${{ needs.version.outputs.build }})
+          body_path: ${{ runner.temp }}/notas.md
+          make_latest: true
+          files: |
+            dist/*.apk
+            dist/*.ipa

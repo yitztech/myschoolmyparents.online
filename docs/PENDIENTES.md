@@ -10,8 +10,12 @@ scripts, `tsc` y `expo-doctor` limpios, Metro empaqueta Android e iOS.
       (`npm run mobile` + `expo run:android|ios` o EAS), no funciona en Expo Go.
 - [ ] **Vincular EAS**: `npx eas init` y `npx eas update:configure` en `apps/mobile` (sustituir el
       `projectId` de relleno de `app.json`); crear el secreto `EXPO_TOKEN` y la variable `EAS_ENABLED=true`.
-- [ ] **Probar `scripts/build-android-direct.mjs`** (APK firmado local; necesita JDK 17 y Android SDK) y guardar la
-      clave de `~/.myschoolmyparents-secrets/android`.
+- [x] `scripts/build-android-direct.mjs` probado (v0.4.0+6): APK firmado, instalado y arrancado en un emulador
+      Android 17. IPA sin firmar con `scripts/build-ios-unsigned.mjs` (Xcode 27).
+- [ ] **Guardar una copia cifrada de la clave** `~/.myschoolmyparents-secrets/android` y cargarla como secretos del
+      entorno `production` (ver docs/REGLAS-DEL-PROYECTO.md) para publicar desde CI.
+- [ ] **Textos legales**: completar en `apps/frontend/src/legal/site.ts` los datos del titular, correos, ley aplicable
+      y plazos, revisarlos con un abogado y poner `borrador: false`.
 
 ## Backend / producto
 

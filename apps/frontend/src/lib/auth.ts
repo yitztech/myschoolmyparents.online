@@ -127,6 +127,16 @@ export async function confirmPasswordReset(email: string, code: string, newPassw
   await api<{ ok: boolean }>('/auth/password/reset', { email: cleanEmail, code, newPassword });
 }
 
+/** Elimina la cuenta de la sesión actual (pide la contraseña) y cierra la sesión. */
+export async function deleteAccount(password: string): Promise<void> {
+  if (import.meta.env.DEV && isMockMode) {
+    await (await import('./auth-mock')).deleteAccount(getStoredSession()?.user.email ?? '', password);
+  } else {
+    await api<{ ok: boolean }>('/auth/account/delete', { password }, { headers: authHeaders() });
+  }
+  storeSession(null);
+}
+
 /**
  * Revalida la sesión guardada contra el backend y devuelve el usuario al día.
  *

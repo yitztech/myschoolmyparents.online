@@ -1,5 +1,6 @@
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { readFileSync } from 'node:fs'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 
 /**
@@ -27,6 +28,21 @@ function requireAuthApiUrl(authApiUrl: string): Plugin {
   }
 }
 
+/**
+ * Versión de la app móvil para la página de descargas, leída de
+ * apps/mobile/app.json (en la imagen de prod se copia a /mobile/app.json, que
+ * es el mismo ../mobile relativo a /app). Si no está, la página habla de «la
+ * última versión» sin número.
+ */
+function mobileVersion(): { version: string; build: string } | null {
+  try {
+    const { expo } = JSON.parse(readFileSync(new URL('../mobile/app.json', import.meta.url), 'utf8'))
+    return { version: String(expo.version), build: String(expo.android.versionCode) }
+  } catch {
+    return null
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // loadEnv recoge tanto los ficheros .env como las VITE_* de process.env
@@ -35,6 +51,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss(), requireAuthApiUrl(env.VITE_AUTH_API_URL ?? '')],
+    define: { __MOBILE_VERSION__: JSON.stringify(mobileVersion()) },
     server: {
       host: true,
       port: 5173,

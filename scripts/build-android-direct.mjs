@@ -86,12 +86,19 @@ if (!text.includes('productionDirect {')) {
         }`,
   );
 }
-text = text.replace(/(release\s*\{[\s\S]*?signingConfig\s*=\s*)signingConfigs\.debug/, '$1signingConfigs.productionDirect');
-if (!text.includes('signingConfig = signingConfigs.productionDirect')) throw new Error('No se pudo configurar la firma de release');
+// La plantilla de Expo escribe `signingConfig signingConfigs.debug` (Groovy, sin `=`); se aceptan las dos formas.
+text = text.replace(/(release\s*\{[\s\S]*?signingConfig\s*=?\s*)signingConfigs\.debug/, '$1signingConfigs.productionDirect');
+if (!/release\s*\{[\s\S]*?signingConfig\s*=?\s*signingConfigs\.productionDirect/.test(text)) throw new Error('No se pudo configurar la firma de release');
 await writeFile(gradle, text);
 await writeFile(path.join(mobile, 'android/local.properties'), `sdk.dir=${sdk.replace(/ /g, '\\ ')}\n`);
 
-await run('./gradlew', ['assembleRelease', '--no-daemon', '--console=plain', '--max-workers=2'], path.join(mobile, 'android'));
+// Solo ARM: es lo que llevan los teléfonos. x86/x86_64 son para emuladores y casi
+// duplican el tamaño del APK.
+await run(
+  './gradlew',
+  ['assembleRelease', '--no-daemon', '--console=plain', '--max-workers=2', '-PreactNativeArchitectures=armeabi-v7a,arm64-v8a'],
+  path.join(mobile, 'android'),
+);
 const apk = path.join(mobile, 'android/app/build/outputs/apk/release/app-release.apk');
 await run('node', [path.join(root, 'scripts/publish-apk.mjs'), apk], root);
 console.log(`APK firmado publicado en dist/. Clave de firma en ${keyDir}: consérvala para futuras actualizaciones.`);

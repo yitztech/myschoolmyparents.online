@@ -7,6 +7,7 @@ import { useApp } from '../context/AppContext';
 import { AuthError } from '../services/auth';
 import { validateEmail } from '../lib/validators';
 import { displayVersion } from '../lib/appVersion';
+import { LegalLinks } from '../components/LegalLinks';
 import { colors } from '../theme';
 import type { AuthStackParams } from '../navigation/types';
 
@@ -85,6 +86,7 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
         <AppText>¿No tienes cuenta?</AppText>
         <Button label="Crear cuenta" variant="text" compact disabled={busy} onPress={() => navigation.navigate('Register')} />
       </View>
+      <LegalLinks />
       <AppText style={{ textAlign: 'center', fontSize: 12, color: colors.subtle, fontWeight: '500' }}>{displayVersion()}</AppText>
     </AuthLayout>
   );

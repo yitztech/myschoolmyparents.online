@@ -90,6 +90,11 @@ export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => vo
         </div>
         {error && <p role="alert" className="rounded-xl border-2 border-coral-deep bg-[#FFE9E0] p-3 text-sm font-bold text-coral-deep">{error}</p>}
         <Button type="submit" variant="coral" className="w-full" disabled={busy}>{busy ? 'Creando cuenta…' : 'Crear cuenta'}</Button>
+        <p className="text-center text-xs font-medium text-ink-soft">
+          Al crear la cuenta aceptas los{' '}
+          <a href="/legal/terminos" className="font-bold underline decoration-sun decoration-2 underline-offset-2">Términos</a> y la{' '}
+          <a href="/legal/privacidad" className="font-bold underline decoration-sun decoration-2 underline-offset-2">Política de privacidad</a>.
+        </p>
       </form>
 
       <GoogleButton mode="register" />

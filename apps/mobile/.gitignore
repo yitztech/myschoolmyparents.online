@@ -14,3 +14,4 @@ npm-debug.*
 # Proyectos nativos que genera Expo (`expo prebuild` / `expo run:*`); la fuente es app.json
 /ios/
 /android/
+/build-ios/

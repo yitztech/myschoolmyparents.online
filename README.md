@@ -18,7 +18,7 @@ e2e/          Pruebas end-to-end (Playwright), paquete npm aparte
 .github/workflows/
   ci.yml             web (build + lint) y móvil (tipos + pruebas), según lo que cambie
   mobile.yml         OTA (EAS Update) o build de tienda cuando cambia apps/mobile en main
-  mobile-release.yml APK en GitHub Releases al subir un tag vX.Y.Z (nombres oficiales)
+  mobile-release.yml instaladores directos (APK firmado + IPA sin firmar) en GitHub Releases, a mano
 scripts/             versión móvil, impacto OTA/tienda y publicación de APK
 docs/                REGLAS-DEL-PROYECTO, ARQUITECTURA-MOVIL, ADR, y flutter-legacy/ (archivo histórico)
 ```
@@ -106,6 +106,39 @@ Réplica web de la app MyParentMyChildren (Flutter) con **React + shadcn + Docke
   Conexión por `DATABASE_URL` o, si no viene, por `DB_HOST`/`DB_PORT`/`DB_USER`/
   `DB_PASSWORD`/`DB_NAME` (así la usa producción: la contraseña generada puede
   llevar caracteres que romperían una URL escrita a mano).
+
+## Páginas legales y descargas
+
+Páginas públicas (se ven sin iniciar sesión) que enlazan las apps y, en el futuro, las fichas de las
+tiendas. **Sus URL no deben cambiar**:
+
+| URL | Contenido |
+|---|---|
+| `/legal/privacidad` | Política de privacidad (web y apps) |
+| `/legal/terminos` | Términos y condiciones de uso |
+| `/legal/cookies` | Cookies y almacenamiento local (no hay cookies) |
+| `/legal/eliminar-cuenta` | Eliminación de la cuenta: con sesión se hace ahí mismo (`POST /api/auth/account/delete`, pide la contraseña). Lo exigen Google Play y App Store |
+| `/descargas` | Instaladores de Android (APK firmado) e iOS (IPA sin firmar), sin cuenta |
+
+Los textos legales son **borradores** (`apps/frontend/src/components/legal/`). Los datos del titular, el
+correo de privacidad, la ley aplicable y los plazos están en `apps/frontend/src/legal/site.ts`: mientras
+valgan `null` se muestran como «[pendiente: …]» y la página avisa de que es un borrador. Cada afirmación
+sobre datos describe lo que hace el código: si cambia (nuevos servicios, sincronización en la nube…), hay
+que cambiar la política. Las apps enlazan las mismas URL desde el acceso, el registro y «Acerca de».
+
+**Descargas.** `/descargas/android` y `/descargas/ios` redirigen (nginx, 302) al alias fijo del último
+release de GitHub. Se miden de tres formas, sin cookies:
+
+- Umami: cada clic en un botón de descarga es un evento `descarga` con `plataforma` y `version`.
+- Los registros de nginx cuentan las peticiones a `/descargas/<plataforma>`, también si el enlace se comparte.
+- GitHub cuenta las descargas de cada archivo:
+
+  ```bash
+  gh api repos/yitztech/myschoolmyparents.online/releases \
+    --jq '.[] | .tag_name as $t | .assets[] | "\($t) \(.name) \(.download_count)"'
+  ```
+
+La versión que muestra la página sale de `apps/mobile/app.json` al compilar la web.
 
 ## Cuentas: login, registro y recuperación
 
@@ -201,6 +234,7 @@ plataforma.
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` | correo transaccional (465, TLS implícito) |
 | `MAIL_FROM` | se mapea a `SMTP_FROM` |
 | `TRUSTED_PROXY_CIDR` | subred de Traefik: nginx solo acepta `X-Forwarded-For` desde ahí |
+| `UMAMI_SCRIPT_URL`, `UMAMI_WEBSITE_ID` | analítica con Umami; vacías = sin analítica (ver abajo) |
 
 Comprobación antes de pedir un despliegue, sin ningún `.env`:
 
@@ -237,6 +271,35 @@ mundo tendrá la IP de Traefik y el rate limit contará a todos como un
 cliente. Comprobación tras desplegar: pedir con
 `curl -H 'X-Forwarded-For: 1.2.3.4' https://.../api/...` y verificar en los
 logs de pino que la IP registrada es la real, no `1.2.3.4` ni la de Traefik.
+
+### Analítica (Umami)
+
+La web se mide con el Umami de la plataforma (`https://stats.yunitztech.com`).
+No hace falta reconstruir la imagen para activarla o cambiar de web: al
+arrancar, `infra/nginx/16-analytics.sh` lee `UMAMI_SCRIPT_URL` y
+`UMAMI_WEBSITE_ID` y escribe en `/etc/nginx/conf.d` (el tmpfs: el contenedor es
+de solo lectura):
+
+- `analytics.inc`: un `sub_filter` que inserta
+  `<script defer … data-domains="myschoolmyparents.online" data-exclude-search="true">`
+  antes de `</head>` en `index.html`, por donde pasan todas las rutas de la SPA.
+- `analytics.conf`: el origen de Umami para `script-src` y `connect-src` de la
+  CSP (variable `$analytics_src` en `security-headers.conf`).
+
+Con las variables vacías no se carga nada de terceros y la CSP no menciona
+Umami. Los valores se validan (URL `https://` y UUID): si no cumplen, nginx no
+arranca, en vez de colar texto arbitrario en el HTML.
+
+- `data-domains`: solo cuenta visitas en producción, no en local ni en
+  previsualizaciones.
+- `data-exclude-search`: nunca envía la *query string*, así que tokens o datos
+  personales en la URL no llegan a la analítica.
+- Las rutas de la SPA las sigue Umami escuchando el historial: no hay código
+  de analítica en el frontend.
+
+Umami no usa cookies ni guarda datos personales: no hace falta banner de
+consentimiento, pero debe nombrarse en la política de privacidad (la web aún
+no tiene una).
 
 ### Correo transaccional
 
