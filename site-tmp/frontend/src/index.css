@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,500;9..144,0,700;9..144,0,900;9..144,1,700;9..144,1,900&family=Karla:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #FFF6E9;
+  --color-paper-deep: #FDEDC7;
+  --color-ink: #262134;
+  --color-ink-soft: #5C5570;
+  --color-coral: #FF4D1C;
+  --color-coral-deep: #B9320A;
+  --color-leaf: #0E7C5A;
+  --color-leaf-deep: #0A5941;
+  --color-sun: #FFC52E;
+  --color-grape: #6D4DF6;
+  --color-candy: #FF7AB8;
+  --color-sky: #BFE6F5;
+
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Karla", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --paper: #FFF6E9;
+  --ink: #262134;
+}
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  background: var(--paper);
+  background-image: radial-gradient(#26213414 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+  color: #262134;
+  font-family: var(--font-body);
+  text-wrap: pretty;
+}
+
+h1, h2, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+p {
+  max-width: 68ch;
+}
+
+:focus-visible {
+  outline: 3px solid #6D4DF6;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ——— Cuaderno + pegatinas ——— */
+
+.paper-lines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 31px,
+    #26213416 31px,
+    #26213416 32px
+  );
+}
+
+.card-brutal {
+  border: 2px solid #262134;
+  box-shadow: 5px 5px 0 #262134;
+}
+
+.card-brutal-sm {
+  border: 2px solid #262134;
+  box-shadow: 3px 3px 0 #262134;
+}
+
+.sticker {
+  border: 2px solid #262134;
+  box-shadow: 2.5px 2.5px 0 #262134;
+}
+
+.marker {
+  background: linear-gradient(transparent 58%, #FFC52E 58%, #FFC52E 94%, transparent 94%);
+  padding: 0 0.15em;
+}
+
+.marker-green {
+  background: linear-gradient(transparent 58%, #BFE8C8 58%, #BFE8C8 94%, transparent 94%);
+  padding: 0 0.15em;
+}
+
+.tape {
+  position: relative;
+}
+.tape::before {
+  content: "";
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  width: 96px;
+  height: 24px;
+  transform: translateX(-50%) rotate(-2.5deg);
+  background: #FFC52ECC;
+  border-left: 2px dashed #26213433;
+  border-right: 2px dashed #26213433;
+  opacity: 0.95;
+}
+
+.book-spine {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.book-spine:hover {
+  transform: rotate(0deg) translateY(-3px) !important;
+  box-shadow: 7px 7px 0 #262134;
+}
+
+.reader-paragraph {
+  background: #FFFEF9;
+  border: 2px solid #262134;
+  box-shadow: 4px 4px 0 #2621341a;
+}
+.reader-paragraph.active {
+  background: #FFFEF9;
+  border-color: #262134;
+  border-left: 10px solid #FF4D1C;
+  box-shadow: 5px 5px 0 #262134;
+}
+
+.word-active {
+  background: #FFC52E;
+  border-radius: 2px;
+  padding: 0 2px;
+  box-decoration-break: clone;
+}
+
+/* Una sola animación de entrada, no cascadas */
+@keyframes sticker-pop {
+  0% { transform: scale(0.92) rotate(-2deg); opacity: 0; }
+  60% { transform: scale(1.03) rotate(0.6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.sticker-pop {
+  animation: sticker-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticker-pop { animation: none; }
+  .book-spine { transition: none; }
+  * { scroll-behavior: auto !important; }
+}
+
+/* Slider con tinta gruesa */
+input[type="range"] {
+  accent-color: #FF4D1C;
+}
