@@ -31,9 +31,16 @@ export class User {
   @Column({ name: 'reset_code_expires', type: 'timestamptz', nullable: true })
   resetCodeExpires: Date | null;
 
-  /** Intentos fallidos del código en curso; a los 5 el código se anula. */
+  /**
+   * Intentos fallidos de código dentro de la ventana actual (no se reinicia
+   * al pedir otro código); al llegar al tope el código se anula.
+   */
   @Column({ name: 'reset_attempts', type: 'int', default: 0 })
   resetAttempts: number;
+
+  /** Inicio de la ventana de una hora en la que cuentan `resetAttempts`. */
+  @Column({ name: 'reset_window_start', type: 'timestamptz', nullable: true })
+  resetWindowStart: Date | null;
 
   /** Antiflood: un correo de recuperación por minuto y cuenta. */
   @Column({ name: 'reset_last_sent', type: 'timestamptz', nullable: true })

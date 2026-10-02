@@ -38,6 +38,18 @@ export class ApiExceptionFilter implements ExceptionFilter {
     // HttpException, así que sin esto una imagen de más de 15 MB devolvía un
     // 500 con traza en los logs en lugar de un 413 con explicación.
     const fst = exception as { statusCode?: number; code?: string };
+
+    // @fastify/rate-limit lanza un objeto plano con statusCode 429 (ni
+    // HttpException ni código FST_): sin esto, superar el límite devolvía un
+    // 500 y el cliente lo trataba como una avería en vez de esperar.
+    if (fst?.statusCode === HttpStatus.TOO_MANY_REQUESTS) {
+      reply.status(HttpStatus.TOO_MANY_REQUESTS).send({
+        error: 'rate_limited',
+        message: 'Demasiadas peticiones. Espera un minuto e inténtalo de nuevo.',
+      });
+      return;
+    }
+
     if (typeof fst?.code === 'string' && fst.code.startsWith('FST_') && typeof fst.statusCode === 'number') {
       const messages: Record<string, string> = {
         FST_REQ_FILE_TOO_LARGE: 'La imagen es demasiado grande (máximo 15 MB).',

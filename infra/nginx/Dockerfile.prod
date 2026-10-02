@@ -4,7 +4,7 @@
 # Ojo: VITE_* son build-time (Vite los hornea en el JS); cambiarlos exige reconstruir.
 FROM node:24.20-alpine AS frontend-build
 WORKDIR /app
-COPY apps/frontend/package.json frontend/package-lock.json* ./
+COPY apps/frontend/package.json apps/frontend/package-lock.json ./
 RUN npm ci && npm cache clean --force
 COPY apps/frontend/ ./
 ARG VITE_AUTH_API_URL=""

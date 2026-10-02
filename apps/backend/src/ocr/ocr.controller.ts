@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import type { User } from '../users/user.entity';
 import { OcrService } from './ocr.service';
 
 /** Tipos que Tesseract sabe leer; cualquier otra cosa se rechaza antes de gastar CPU. */
@@ -28,7 +29,7 @@ export class OcrController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  async recognize(@Req() req: FastifyRequest) {
+  async recognize(@Req() req: FastifyRequest & { user: User }) {
     // Se iteran las partes a mano (compatible con cualquier opción del
     // plugin multipart): el fichero va en `image` y el idioma en `lang`.
     let image: Buffer | null = null;
@@ -44,6 +45,6 @@ export class OcrController {
       }
     }
     if (!image) throw new BadRequestException('Falta la imagen (campo "image").');
-    return this.ocr.recognize(image, lang);
+    return this.ocr.recognize(image, lang, req.user.id);
   }
 }
