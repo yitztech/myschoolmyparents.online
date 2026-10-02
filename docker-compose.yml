@@ -1,21 +1,43 @@
 name: my-school-my-parents
 
-# 4 contenedores separados:
-#   db       -> PostgreSQL 16 (persistencia del backend)
-#   backend  -> API NestJS + Fastify + TypeScript (auth local JWT + OCR + health)
-#   frontend -> build Vite servido con `vite preview` (sin nginx dentro)
-#   nginx    -> puerta de entrada única, publicada en el host como :6060
-#               /       -> frontend:4173
-#               /api/   -> backend:3001
+# Base común: solo topología (servicios, redes, healthchecks) + protecciones
+# que aplican a TODOS los entornos (ver refuerzos extra por env en
+# docker-compose.override.yml y docker-compose.prod.yml).
+#   DEV:  docker compose --env-file .env.dev up --build
+#         (añade docker-compose.override.yml automáticamente)
+#   PROD: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up --build -d
+#
+# Notas:
+# - El servicio `frontend` (vite dev) solo existe en dev (override); en prod los
+#   estáticos van horneados en la imagen nginx (nginx/Dockerfile.prod).
+# - Redes: `public` (nginx/frontend/backend) y `db-net` (backend/db). La base
+#   de datos NO es alcanzable desde nginx ni desde el frontend.
+# - Los volúmenes separan datos: `pgdata` (dev, conserva los datos locales
+#   actuales) y `pgdata_prod` (prod). No mezclar.
+
+x-logging: &log
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+networks:
+  # Tráfico entrante + app.
+  public:
+  # Solo backend <-> PostgreSQL. Sin salida al exterior ni a nginx.
+  db-net:
+    internal: true
 
 services:
   db:
     image: postgres:16-alpine
     container_name: msm-db
+    networks:
+      - db-net
     environment:
       POSTGRES_DB: myschoolmyparents
       POSTGRES_USER: msm
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-msm_dev_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD (usa --env-file .env.dev o .env.prod)}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,50 +45,104 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    # La imagen oficial inicia como root para preparar el volumen y baja al
+    # usuario `postgres`: solo se conservan las capabilities que necesita.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    logging: *log
     restart: unless-stopped
 
   backend:
     build:
-      context: ./backend
+      context: ./apps/backend
+      target: prod
     container_name: msm-backend
+    networks:
+      - public
+      - db-net
     environment:
-      NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgres://msm:${POSTGRES_PASSWORD:-msm_dev_password}@db:5432/myschoolmyparents
-      JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-secret}
-      JWT_EXPIRES_IN: 7d
-      CORS_ORIGIN: http://localhost:6060,http://localhost:5173
+      DATABASE_URL: postgres://msm:${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD}@db:5432/myschoolmyparents
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN:?Falta CORS_ORIGIN}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Rangos de proxy de confianza para resolver la IP real desde
+      # X-Forwarded-For (ver .env.example). Por defecto, las privadas.
+      TRUST_PROXY: ${TRUST_PROXY:-loopback,linklocal,uniquelocal}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-}
+      # Correo transaccional (en prod, el Stalwart del servidor). Vacío en
+      # dev: el código de recuperación sale por los logs, no por correo.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     depends_on:
       db:
         condition: service_healthy
     expose:
       - "3001"
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-}
-        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
-    container_name: msm-frontend
-    depends_on:
-      - backend
-    expose:
-      - "4173"
+    healthcheck:
+      # 127.0.0.1 (no `localhost`): el backend escucha en IPv4 y el wget de
+      # busybox no reintenta en IPv4 si `localhost` resuelve primero a ::1.
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # Runtime como usuario `node` (ver Dockerfile): sin capabilities y sin
+    # poder escalar privilegios. `init` reaps los workers de tesseract.
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging: *log
     restart: unless-stopped
 
   nginx:
     build:
-      context: ./nginx
+      context: ./infra/nginx
     container_name: msm-nginx
-    ports:
-      - "6060:80"
+    networks:
+      - public
     depends_on:
-      - frontend
-      - backend
+      backend:
+        condition: service_started
+    # El master arranca como root y necesita: atar el puerto 80
+    # (NET_BIND_SERVICE), preparar la caché (CHOWN) y bajar los workers al
+    # usuario `nginx` (SETGID/SETUID). Todo lo demás cae.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - NET_BIND_SERVICE
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # /healthz lo sirve el propio nginx (ver nginx/*.conf): no depende de
+      # que `frontend` o `backend` estén arriba.
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *log
     restart: unless-stopped
 
 volumes:
+  # Desarrollo local (reutiliza los datos que ya tenías).
   pgdata:
+  # Producción (se monta en docker-compose.prod.yml; separado de dev).
+  pgdata_prod:

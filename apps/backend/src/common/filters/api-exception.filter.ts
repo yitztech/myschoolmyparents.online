@@ -34,6 +34,23 @@ export class ApiExceptionFilter implements ExceptionFilter {
       return;
     }
 
+    // Errores propios de Fastify (multipart, parseo del cuerpo...). No son
+    // HttpException, así que sin esto una imagen de más de 15 MB devolvía un
+    // 500 con traza en los logs en lugar de un 413 con explicación.
+    const fst = exception as { statusCode?: number; code?: string };
+    if (typeof fst?.code === 'string' && fst.code.startsWith('FST_') && typeof fst.statusCode === 'number') {
+      const messages: Record<string, string> = {
+        FST_REQ_FILE_TOO_LARGE: 'La imagen es demasiado grande (máximo 15 MB).',
+        FST_FILES_LIMIT: 'Envía una sola imagen por petición.',
+        FST_INVALID_MULTIPART_CONTENT_TYPE: 'El formulario debe enviarse como multipart/form-data.',
+      };
+      reply.status(fst.statusCode).send({
+        error: fst.statusCode === HttpStatus.PAYLOAD_TOO_LARGE ? 'payload_too_large' : 'bad_request',
+        message: messages[fst.code] ?? 'No se pudo procesar la petición.',
+      });
+      return;
+    }
+
     this.logger.error(`Error no controlado: ${(exception as Error)?.message}`, (exception as Error)?.stack);
     reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
       error: 'internal',

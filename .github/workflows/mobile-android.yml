@@ -22,6 +22,10 @@ env:
   FLUTTER_VERSION: "3.47.4"
   JAVA_VERSION: "17"
 
+defaults:
+  run:
+    working-directory: apps/mobile
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -131,5 +135,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            dist/*.apk
-            dist/*.aab
+            apps/mobile/dist/*.apk
+            apps/mobile/dist/*.aab

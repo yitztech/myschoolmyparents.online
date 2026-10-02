@@ -1,0 +1,11 @@
+# Nunca hornear dependencias, builds obsoletos ni secretos en la imagen.
+# (VITE_* llegan por ARG, no por .env.)
+node_modules/
+dist/
+.env*
+*.log
+logs/
+coverage/
+.vite/
+.vscode/
+.DS_Store

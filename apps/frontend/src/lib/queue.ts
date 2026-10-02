@@ -60,7 +60,10 @@ export async function pump() {
       } catch (err: unknown) {
         const code = (err as { code?: string })?.code ?? ((err as Error)?.message === 'missing_image' ? 'missing_image' : 'ocr_failed');
         const attempts = job.attempts + 1;
-        if (attempts >= 3) {
+        // Sin sesión válida el reintento no arregla nada: se falla a la
+        // primera y la UI pide volver a iniciar sesión.
+        const fatal = code === 'auth_required' || code === 'missing_image';
+        if (fatal || attempts >= 3) {
           await db.jobs.update(job.id, { state: 'failed', attempts, errorCode: code, updatedAt: Date.now() });
           await db.pages.update(job.pageId, { status: 'error', errorCode: code });
         } else {

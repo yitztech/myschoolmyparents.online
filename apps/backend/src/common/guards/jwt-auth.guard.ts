@@ -20,11 +20,17 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Sesión no válida. Vuelve a iniciar sesión.');
     }
     try {
-      const payload = await this.jwt.verifyAsync<{ sub: string }>(token, {
+      const payload = await this.jwt.verifyAsync<{ sub: string; tv?: number }>(token, {
         secret: this.config.get<string>('jwtSecret'),
       });
       const user = await this.users.findById(payload.sub);
       if (!user) throw new UnauthorizedException('Sesión no válida. Vuelve a iniciar sesión.');
+      // El token queda invalidado si la contraseña cambió después de
+      // emitirlo (confirmReset sube tokenVersion). Los tokens antiguos, sin
+      // `tv`, cuentan como versión 0, que es el valor de alta.
+      if ((payload.tv ?? 0) !== user.tokenVersion) {
+        throw new UnauthorizedException('Tu contraseña cambió. Vuelve a iniciar sesión.');
+      }
       req.user = user;
       return true;
     } catch (e) {

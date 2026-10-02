@@ -92,9 +92,6 @@ export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => vo
         <Button type="submit" variant="coral" className="w-full" disabled={busy}>{busy ? 'Creando cuenta…' : 'Crear cuenta'}</Button>
       </form>
 
-      <div className="my-4 flex items-center gap-3 text-xs font-bold text-ink-soft" aria-hidden>
-        <span className="h-0.5 flex-1 rounded bg-ink/15" /><span>o</span><span className="h-0.5 flex-1 rounded bg-ink/15" />
-      </div>
       <GoogleButton mode="register" />
 
       <p className="mt-6 text-center text-sm font-medium text-ink-soft">

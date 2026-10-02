@@ -1,0 +1,25 @@
+{
+  "name": "myschoolmyparents",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MySchoolMyParents Online: fotos de lecturas escolares convertidas en libros bilingües con voz. Monorepo: web (React + NestJS) y app Flutter.",
+  "scripts": {
+    "up": "docker compose up -d --build",
+    "up:logs": "docker compose up --build",
+    "down": "docker compose down",
+    "down:clean": "docker compose down -v",
+    "logs": "docker compose logs -f",
+    "ps": "docker compose ps",
+    "install:all": "npm ci --prefix apps/backend && npm ci --prefix apps/frontend && npm ci --prefix e2e",
+    "build": "npm run build --prefix apps/backend && npm run build --prefix apps/frontend",
+    "lint": "npm run lint --prefix apps/frontend",
+    "test:e2e": "npm test --prefix e2e",
+    "mobile:get": "apps/mobile/scripts/flutterw pub get",
+    "mobile:run": "apps/mobile/scripts/flutterw run",
+    "mobile:analyze": "apps/mobile/scripts/flutterw analyze --no-pub",
+    "mobile:test": "apps/mobile/scripts/flutterw test --no-pub"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

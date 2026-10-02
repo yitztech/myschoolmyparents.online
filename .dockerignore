@@ -1,2 +1,23 @@
-node_modules
-dist
+# Contexto RAÍZ: solo lo usa nginx/Dockerfile.prod (construye el frontend).
+# Todo lo demás queda fuera del contexto: builds más rápidos y ningún
+# secreto (.env.prod) ni node_modules viaja al daemon.
+.git/
+apps/backend/
+# Tests end-to-end: paquete npm aparte, no entra en ninguna imagen ni debe
+# viajar al daemon en cada build (el contexto de prod es la raíz).
+e2e/
+**/node_modules/
+**/dist/
+**/build/
+**/dist-ssr/
+**/.env*
+**/*.log
+logs/
+coverage/
+.nyc_output/
+.vite/
+.turbo/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

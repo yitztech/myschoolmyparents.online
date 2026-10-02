@@ -31,6 +31,22 @@ export class User {
   @Column({ name: 'reset_code_expires', type: 'timestamptz', nullable: true })
   resetCodeExpires: Date | null;
 
+  /** Intentos fallidos del código en curso; a los 5 el código se anula. */
+  @Column({ name: 'reset_attempts', type: 'int', default: 0 })
+  resetAttempts: number;
+
+  /** Antiflood: un correo de recuperación por minuto y cuenta. */
+  @Column({ name: 'reset_last_sent', type: 'timestamptz', nullable: true })
+  resetLastSent: Date | null;
+
+  /**
+   * Sube en cada cambio de contraseña. El JWT lleva este número, así que
+   * los tokens emitidos antes del reset dejan de valer: si alguien te robó
+   * la sesión, cambiar la contraseña le echa de verdad.
+   */
+  @Column({ name: 'token_version', type: 'int', default: 0 })
+  tokenVersion: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

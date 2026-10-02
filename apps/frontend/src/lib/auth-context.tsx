@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
+  AuthError,
   confirmPasswordReset,
+  fetchMe,
   getStoredSession,
   loginWithEmail,
   loginWithGoogle,
@@ -29,9 +31,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Al arrancar no basta con leer localStorage: ese objeto lo puede escribir
+  // cualquiera desde la consola del navegador, y además el token puede haber
+  // sido revocado (cambio de contraseña) o caducado en el servidor. Se
+  // revalida contra /auth/me.
   useEffect(() => {
-    setSession(getStoredSession());
-    setLoading(false);
+    let cancelled = false;
+    const stored = getStoredSession();
+    if (!stored) {
+      setLoading(false);
+      return;
+    }
+    void (async () => {
+      try {
+        const user = await fetchMe();
+        if (cancelled) return;
+        if (user) setSession({ ...stored, user });
+        else {
+          svcLogout();
+          setSession(null);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof AuthError) {
+          // El backend dice que el token no vale: fuera.
+          svcLogout();
+          setSession(null);
+        } else {
+          // Backend inalcanzable. La app funciona en local (IndexedDB), así
+          // que se conserva la sesión en vez de echar al usuario por una
+          // avería de red.
+          setSession(stored);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {

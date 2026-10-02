@@ -1,0 +1,84 @@
+# ─── PROD (myschoolmyparents.online) ───
+# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up --build -d
+# - nginx publica SOLO en 127.0.0.1:80: la entrada real es el reverse proxy
+#   del host (Caddy/Traefik), que termina el TLS y pone HSTS + redirect
+#   80->443. Sin esto el sitio sería alcanzable en HTTP plano por IP.
+# - El backend se une además a la red externa del servidor de correo para
+#   hablar SMTP con Stalwart (correo transaccional; las campañas van por
+#   Listmonk, con otra identidad de envío).
+# - Sin bind-mounts ni hot-reload: imágenes inmutables (`npm ci`).
+# - Filesystem de solo lectura en backend y nginx (tmpfs donde hace falta).
+# - Límites de memoria/CPU para que un pico (p. ej. OCR) no tumbe el host.
+# - Frontend: estáticos Vite horneados en la imagen nginx (nginx/Dockerfile.prod).
+#   No existe servicio `frontend` en prod. Ojo: VITE_* son build-time,
+#   cambiarlos exige reconstruir (`--build`).
+# - Requiere secretos reales (falla al arrancar si faltan: POSTGRES_PASSWORD, JWT_SECRET).
+
+networks:
+  # Red del servidor de correo, creada por el playbook que despliega
+  # Stalwart. Debe existir antes del `up` (docker network ls).
+  mail:
+    external: true
+    name: ${MAIL_NETWORK:?Falta MAIL_NETWORK (red Docker de Stalwart; ver .env.prod.example)}
+
+services:
+  db:
+    container_name: msm-db-prod
+    volumes:
+      # Datos de producción, separados del volumen `pgdata` de dev.
+      - pgdata_prod:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: "1.0"
+
+  backend:
+    container_name: msm-backend-prod
+    image: my-school-my-parents-backend:prod
+    build:
+      target: prod
+    networks:
+      - public
+      - db-net
+      - mail
+    environment:
+      NODE_ENV: production
+    # Solo lectura: tesseract cachea el .traineddata en /tmp (ver
+    # backend/src/ocr/ocr.service.ts) y los uploads van en memoria.
+    read_only: true
+    tmpfs:
+      - /tmp:size=256M,mode=1777
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "2.0"
+
+  nginx:
+    container_name: msm-nginx-prod
+    image: my-school-my-parents-nginx:prod
+    build:
+      context: .
+      dockerfile: ./infra/nginx/Dockerfile.prod
+      args:
+        VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    ports:
+      # Solo loopback: la entrada pública es el reverse proxy del host
+      # (Caddy/Traefik), que termina el TLS. Publicarlo en 0.0.0.0 dejaría
+      # el sitio accesible en HTTP plano por la IP del VPS, saltándose esa
+      # capa. Si el :80 del host ya está ocupado, cambia el puerto de la
+      # izquierda (p. ej. "127.0.0.1:8080:80") y apunta ahí el proxy.
+      - "127.0.0.1:80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    deploy:
+      resources:
+        limits:
+          memory: 128M

@@ -70,9 +70,6 @@ export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void 
         <Button type="submit" variant="coral" className="w-full" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</Button>
       </form>
 
-      <div className="my-4 flex items-center gap-3 text-xs font-bold text-ink-soft" aria-hidden>
-        <span className="h-0.5 flex-1 rounded bg-ink/15" /><span>o</span><span className="h-0.5 flex-1 rounded bg-ink/15" />
-      </div>
       <GoogleButton mode="login" />
 
       <nav className="mt-6 grid gap-2 text-center text-sm" aria-label="Opciones de cuenta">

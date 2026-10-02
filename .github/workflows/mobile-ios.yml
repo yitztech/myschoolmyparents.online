@@ -21,6 +21,10 @@ concurrency:
 env:
   FLUTTER_VERSION: "3.47.4"
 
+defaults:
+  run:
+    working-directory: apps/mobile
+
 jobs:
   build-ios:
     runs-on: macos-15
@@ -147,5 +151,5 @@ jobs:
           prerelease: false
           fail_on_unmatched_files: false
           files: |
-            dist/*.zip
-            dist/*.ipa
+            apps/mobile/dist/*.zip
+            apps/mobile/dist/*.ipa

@@ -1,0 +1,15 @@
+{
+  "name": "myschoolmyparents-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tests end-to-end. Paquete aparte a propósito: no toca las dependencias ni los builds de backend/frontend, y .dockerignore lo deja fuera del contexto de las imágenes.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report",
+    "install-browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  }
+}

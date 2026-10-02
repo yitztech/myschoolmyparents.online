@@ -1,0 +1,84 @@
+# ─── DEV local (override automático) ───
+# Se carga solo al usar `docker compose --env-file .env.dev up --build`.
+# Hot-reload (vite dev + nest watch), logs legibles.
+# Entrada única: http://localhost:6060 (+ dominio OrbStack del servicio nginx).
+# Aislamiento dev: puertos solo en loopback (no se exponen a la LAN),
+# código montado de solo lectura, mismas protecciones que prod.
+
+x-logging: &log
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    container_name: msm-db-dev
+    ports:
+      # Acceso directo a PostgreSQL desde el host (psql, clientes GUI).
+      - "127.0.0.1:5432:5432"
+
+  backend:
+    container_name: msm-backend-dev
+    image: my-school-my-parents-backend:dev
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      # Hot-reload: el código se monta sobre la imagen (node_modules queda
+      # el horneado gracias al volumen anónimo). Solo lectura: el contenedor
+      # no puede modificar el fuente del host.
+      - ./apps/backend/src:/app/src:ro
+      - ./apps/backend/nest-cli.json:/app/nest-cli.json:ro
+      - ./apps/backend/tsconfig.json:/app/tsconfig.json:ro
+      - ./apps/backend/tsconfig.build.json:/app/tsconfig.build.json:ro
+      - /app/node_modules
+    ports:
+      - "127.0.0.1:3001:3001"
+
+  frontend:
+    image: my-school-my-parents-frontend:dev
+    build:
+      context: ./apps/frontend
+      target: dev
+    container_name: msm-frontend-dev
+    networks:
+      - public
+    environment:
+      # Proxy /api del `vite dev` (ver frontend/vite.config.ts).
+      VITE_API_URL: http://backend:3001
+      # Vacío = mock local de auth. Puede apuntar a una API externa de cuentas.
+      VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-}
+      VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    volumes:
+      - ./apps/frontend/src:/app/src:ro
+      - ./apps/frontend/public:/app/public:ro
+      - ./apps/frontend/index.html:/app/index.html:ro
+      - /app/node_modules
+    expose:
+      - "5173"
+    ports:
+      # Acceso directo al vite dev (útil para HMR sin pasar por nginx).
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      - backend
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging: *log
+    restart: unless-stopped
+
+  nginx:
+    container_name: msm-nginx-dev
+    image: my-school-my-parents-nginx:dev
+    build:
+      args:
+        NGINX_CONF: nginx.dev.conf
+    ports:
+      - "127.0.0.1:6060:80"
+    depends_on:
+      - frontend
+      - backend

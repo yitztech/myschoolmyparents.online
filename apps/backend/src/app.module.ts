@@ -11,6 +11,9 @@ import { HealthModule } from './health/health.module';
 import { OcrModule } from './ocr/ocr.module';
 import { UsersModule } from './users/users.module';
 
+/** Sin espacios ni saltos de línea y acotado: evita inyección en los logs. */
+const SAFE_REQUEST_ID = /^[A-Za-z0-9._-]{1,64}$/;
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
@@ -21,8 +24,14 @@ import { UsersModule } from './users/users.module';
         return {
           pinoHttp: {
             level: config.get<string>('logLevel'),
-            // Trazabilidad: respeta X-Request-Id del proxy o genera uno.
-            genReqId: (req) => (req.headers['x-request-id'] as string) ?? randomUUID(),
+            // Trazabilidad: respeta el X-Request-Id del proxy o genera uno.
+            // Se valida el formato porque la cabecera la controla el cliente:
+            // sin filtro, cualquiera puede meter saltos de línea y texto
+            // arbitrario en cada entrada del agregador de logs.
+            genReqId: (req) => {
+              const id = req.headers['x-request-id'];
+              return typeof id === 'string' && SAFE_REQUEST_ID.test(id) ? id : randomUUID();
+            },
             // Nunca registrar secretos.
             redact: {
               paths: [

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../lib/auth-context';
-import { getGoogleOAuthUrl, isMockMode, AuthError } from '../../lib/auth';
+import { getGoogleOAuthUrl, isGoogleEnabled, isMockMode, AuthError } from '../../lib/auth';
 import { isEmailValid } from '../../lib/password';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -17,6 +17,14 @@ function GoogleIcon() {
   );
 }
 
+/**
+ * Alta/login con Google.
+ *
+ * Se oculta por completo si no hay OAuth configurado: hoy el backend
+ * responde 410 a /api/auth/google, así que mostrarlo solo llevaría a un
+ * error. Incluye su propio separador para no dejar un "o" huérfano cuando
+ * no se pinta.
+ */
 export function GoogleButton({ mode }: { mode: 'register' | 'login' }) {
   const { loginGoogle } = useAuth();
   const [open, setOpen] = useState(false);
@@ -56,8 +64,13 @@ export function GoogleButton({ mode }: { mode: 'register' | 'login' }) {
     }
   }
 
+  if (!isGoogleEnabled) return null;
+
   return (
     <>
+      <div className="my-4 flex items-center gap-3 text-xs font-bold text-ink-soft" aria-hidden>
+        <span className="h-0.5 flex-1 rounded bg-ink/15" /><span>o</span><span className="h-0.5 flex-1 rounded bg-ink/15" />
+      </div>
       <Button type="button" variant="outline" className="w-full" onClick={start} aria-label={mode === 'register' ? 'Registrarse con Google' : 'Continuar con Google'}>
         <GoogleIcon />
         {mode === 'register' ? 'Registrarse con Google' : 'Continuar con Google'}

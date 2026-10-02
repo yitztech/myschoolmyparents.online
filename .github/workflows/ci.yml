@@ -1,0 +1,75 @@
+# Se ejecuta en cada PR y en cada push a main. No despliega nada: compila la web
+# y analiza/prueba la app móvil solo cuando cambia su parte del repositorio.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Qué cambió
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'apps/backend/**'
+              - 'apps/frontend/**'
+              - 'infra/**'
+              - 'e2e/**'
+              - 'docker-compose*.yml'
+            mobile:
+              - 'apps/mobile/**'
+
+  web:
+    name: Web · tipos y build
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            apps/backend/package-lock.json
+            apps/frontend/package-lock.json
+      - run: npm ci --prefix apps/backend --no-audit --no-fund
+      - run: npm ci --prefix apps/frontend --no-audit --no-fund
+      - run: npm run build --prefix apps/backend
+      - run: npm run lint --prefix apps/frontend
+      - run: npm run build --prefix apps/frontend
+
+  mobile:
+    name: Móvil · análisis y pruebas
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: apps/mobile/.flutter-version
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze lib
+      - run: flutter test

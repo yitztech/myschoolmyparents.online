@@ -1,0 +1,10 @@
+# Nunca hornear dependencias, builds ni secretos en la imagen.
+node_modules/
+dist/
+.env*
+*.log
+logs/
+coverage/
+.nyc_output/
+.vscode/
+.DS_Store
