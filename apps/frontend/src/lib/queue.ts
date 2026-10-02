@@ -84,15 +84,15 @@ export async function pump() {
 export async function approveDraft(draftId: string, editedParagraphs?: string[]) {
   const draft = await db.drafts.get(draftId);
   if (!draft) return;
-  const paras = editedParagraphs ?? (JSON.parse(draft.paragraphsJson as unknown as string) as string[] | string[]).flat();
-  // draft.paragraphsJson is string[] already
-  const list: string[] = Array.isArray(editedParagraphs) ? editedParagraphs : (draft.paragraphsJson as string[]);
+  // paragraphsJson ya es un string[] (Dexie guarda el array tal cual). Antes
+  // se le pasaba además por JSON.parse, que lanzaba con cualquier array y
+  // dejaba "Añadir al libro" sin efecto.
+  const list: string[] = editedParagraphs ?? draft.paragraphsJson;
   await db.transaction('rw', [db.paragraphs, db.pages, db.jobs, db.drafts, db.books], async () => {
     const book = await db.books.get(draft.bookId);
     const rev = (book?.contentRevision ?? 0) + 1;
     // borra párrafos previos de esa página (idempotente: reaprobar no duplica)
     await db.paragraphs.where('pageId').equals(draft.pageId).delete();
-    const base = Date.now();
     for (let i = 0; i < list.length; i++) {
       await db.paragraphs.add({
         id: uid('para'),
@@ -103,8 +103,6 @@ export async function approveDraft(draftId: string, editedParagraphs?: string[])
         textRevision: rev,
       });
     }
-    void base;
-    void paras;
     await db.pages.update(draft.pageId, { status: 'approved', errorCode: undefined, updatedAt: Date.now() });
     await db.jobs.where('pageId').equals(draft.pageId).modify({ state: 'approved', updatedAt: Date.now() });
     await db.drafts.delete(draft.id);

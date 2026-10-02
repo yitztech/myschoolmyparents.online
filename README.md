@@ -352,8 +352,11 @@ npm run install-browsers                   # descarga Chromium
 npm test
 ```
 
-16 tests en dos bloques:
+17 tests en tres bloques:
 
+- **Flujo principal** (`tests/flujo.spec.ts`): crear un libro, subir la página
+  de ejemplo, OCR en el backend, aprobar el borrador y verlo en el lector, sin
+  errores de consola.
 - **Interfaz** (`tests/auth.spec.ts`): registro, política de contraseña,
   cierre de sesión, login, credenciales incorrectas y el primer paso de la
   recuperación.
@@ -361,7 +364,7 @@ npm test
   rechace lo que no sea una imagen, que la recuperación responda igual exista
   o no la cuenta, y que el `ValidationPipe` rechace campos fuera del contrato.
 
-Un tercer bloque, *Invariantes de seguridad*, vigila los arreglos hechos antes
+Dentro de la interfaz, el bloque *Invariantes de seguridad* vigila los arreglos hechos antes
 del despliegue: que el bundle no lleve el mock de localStorage, que la sesión
 guarde un JWT del backend con su `tv` (tokenVersion) y no un token inventado,
 que el botón de Google no se pinte, y que el código de recuperación no se
