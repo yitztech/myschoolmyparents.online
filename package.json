@@ -10,14 +10,15 @@
     "down:clean": "docker compose down -v",
     "logs": "docker compose logs -f",
     "ps": "docker compose ps",
-    "install:all": "npm ci --prefix apps/backend && npm ci --prefix apps/frontend && npm ci --prefix e2e",
+    "install:all": "npm ci --prefix apps/backend && npm ci --prefix apps/frontend && npm ci --prefix apps/mobile && npm ci --prefix e2e",
     "build": "npm run build --prefix apps/backend && VITE_AUTH_API_URL=/api npm run build --prefix apps/frontend",
     "lint": "npm run lint --prefix apps/frontend",
     "test:e2e": "npm test --prefix e2e",
-    "mobile:get": "apps/mobile/scripts/flutterw pub get",
-    "mobile:run": "apps/mobile/scripts/flutterw run",
-    "mobile:analyze": "apps/mobile/scripts/flutterw analyze --no-pub",
-    "mobile:test": "apps/mobile/scripts/flutterw test --no-pub"
+    "mobile:test": "npm test --prefix apps/mobile && node --test scripts/test-mobile-scripts.mjs",
+    "mobile": "npm run start --prefix apps/mobile",
+    "mobile:typecheck": "npm run typecheck --prefix apps/mobile",
+    "mobile:version": "node scripts/mobile-version.mjs",
+    "mobile:impact": "node scripts/mobile-impact.mjs"
   },
   "engines": {
     "node": ">=24"

@@ -1,0 +1,69 @@
+# APK de distribución directa al subir un tag vX.Y.Z: compila con EAS (perfil «direct»),
+# nombra el instalador con las reglas oficiales (docs/REGLAS-DEL-PROYECTO.md) y lo adjunta
+# a una GitHub Release. El tag debe coincidir con la versión de apps/mobile/app.json.
+#
+# Requiere el secreto EXPO_TOKEN y que el proyecto esté vinculado (`npx eas init`).
+name: App móvil · APK
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci --prefix apps/mobile --no-audit --no-fund
+
+      - name: Versión
+        id: version
+        run: |
+          v=$(node scripts/mobile-version.mjs --json)
+          echo "version=$(echo "$v" | jq -r .version)" >> "$GITHUB_OUTPUT"
+          echo "build=$(echo "$v" | jq -r .build)" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v$(echo "$v" | jq -r .version)" ]; then
+            echo "::error::El tag ${GITHUB_REF_NAME} no coincide con la versión de app.json ($(echo "$v" | jq -r .version))."
+            exit 1
+          fi
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Compilar APK (perfil direct)
+        working-directory: apps/mobile
+        run: eas build --platform android --profile direct --non-interactive --wait --json > "$RUNNER_TEMP/build.json"
+
+      - name: Descargar y renombrar según las reglas del proyecto
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD: ${{ steps.version.outputs.build }}
+        run: |
+          url=$(jq -r '.[0].artifacts.buildUrl' "$RUNNER_TEMP/build.json")
+          mkdir -p dist
+          curl -fsSL "$url" -o "$RUNNER_TEMP/app.apk"
+          cp "$RUNNER_TEMP/app.apk" "dist/MySchoolMyParents-Online-v${VERSION}+${BUILD}.apk"
+          cp "$RUNNER_TEMP/app.apk" "dist/MySchoolMyParents-Online-v${VERSION}.apk"
+          ls -lh dist/
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('manual-apk-{0}', steps.version.outputs.version) }}
+          name: MySchoolMyParents Online v${{ steps.version.outputs.version }} (Build ${{ steps.version.outputs.build }})
+          prerelease: ${{ github.ref_type != 'tag' }}
+          files: dist/*.apk

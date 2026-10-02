@@ -1,0 +1,87 @@
+# Publica la app móvil cuando cambia en main, por el camino que corresponda:
+# - Solo cambio JavaScript → actualización OTA con EAS Update (llega en minutos).
+# - Cambio nativo (dependencias, app.json, iconos, módulo msm-ocr…) → build nuevo para las tiendas.
+# La decisión la toma scripts/mobile-impact.mjs. Aunque se equivocara, runtimeVersion
+# (fingerprint) impide que una OTA llegue a un binario incompatible.
+#
+# Configuración: variable EAS_ENABLED=true y secreto EXPO_TOKEN (expo.dev → Access tokens).
+# Antes hay que vincular el proyecto: `npx eas init` y `npx eas update:configure` en apps/mobile.
+name: App móvil
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Tipo de publicación
+        type: choice
+        options: [ota, tienda]
+        default: ota
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    environment: production
+    if: vars.EAS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci --prefix apps/mobile --no-audit --no-fund
+      - run: npm run typecheck --prefix apps/mobile
+      - run: npm test --prefix apps/mobile
+
+      - name: OTA o tienda
+        id: plan
+        env:
+          CHOSEN: ${{ inputs.release }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$CHOSEN" ]; then
+            if [ "$CHOSEN" = "ota" ]; then
+              base_ref="${BEFORE:-HEAD~1}"
+              native_release=$(node scripts/mobile-impact.mjs "$base_ref" --json | jq -r .mobile.release)
+              if [ "$native_release" = "tienda" ]; then
+                echo "::error::Este cambio necesita un binario nativo; no se permite forzar OTA."
+                exit 1
+              fi
+            fi
+            release="$CHOSEN"
+          else
+            node scripts/mobile-impact.mjs "$BEFORE" | tee -a "$GITHUB_STEP_SUMMARY"
+            release=$(node scripts/mobile-impact.mjs "$BEFORE" --json | jq -r .mobile.release)
+          fi
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+      - uses: expo/expo-github-action@v8
+        if: steps.plan.outputs.release != 'ninguno'
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build para App Store y Google Play
+        if: steps.plan.outputs.release == 'tienda'
+        working-directory: apps/mobile
+        run: eas build --platform all --profile production --non-interactive --no-wait
+
+      - name: Actualización OTA
+        if: steps.plan.outputs.release == 'ota'
+        working-directory: apps/mobile
+        env:
+          MESSAGE: ${{ github.event.head_commit.message || 'Publicación manual' }}
+        run: eas update --channel production --environment production --message "$MESSAGE" --non-interactive

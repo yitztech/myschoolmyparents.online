@@ -12,18 +12,20 @@ y la **app móvil** (Flutter, Android e iOS).
 apps/
   backend/    NestJS + Fastify: auth local JWT, OCR (Tesseract), health
   frontend/   React 19 + Vite + Tailwind v4 + shadcn + Dexie (IndexedDB)
-  mobile/     Flutter (Dart): su README, AGENTS.md y docs/ están dentro
+  mobile/     Expo SDK 57 + React Native + TypeScript (módulo nativo de OCR en modules/msm-ocr)
 infra/nginx/  Proxy: dev (vite + api) y prod (estáticos + api)
 e2e/          Pruebas end-to-end (Playwright), paquete npm aparte
 .github/workflows/
-  ci.yml             web (build + lint) y móvil (analyze + test), según lo que cambie
-  mobile-android.yml APK/AAB en GitHub Releases al subir un tag vX.Y.Z
-  mobile-ios.yml     IPA/simulador en GitHub Releases al subir un tag vX.Y.Z
+  ci.yml             web (build + lint) y móvil (tipos + pruebas), según lo que cambie
+  mobile.yml         OTA (EAS Update) o build de tienda cuando cambia apps/mobile en main
+  mobile-release.yml APK en GitHub Releases al subir un tag vX.Y.Z (nombres oficiales)
+scripts/             versión móvil, impacto OTA/tienda y publicación de APK
+docs/                REGLAS-DEL-PROYECTO, ARQUITECTURA-MOVIL, ADR, y flutter-legacy/ (archivo histórico)
 ```
 
 Comandos desde la raíz: `npm run up` (web con Docker), `npm run build`, `npm run lint`,
-`npm run mobile:run`, `npm run mobile:analyze`, `npm run mobile:test`.
-Cada app mantiene su propio `package-lock.json` / `pubspec.lock` (sin workspaces),
+`npm run mobile` (Expo), `npm run mobile:typecheck`, `npm run mobile:test`, `npm run mobile:version`.
+Cada app mantiene su propio `package-lock.json` (sin workspaces),
 porque las imágenes Docker se construyen por aplicación.
 
 La app y la web comparten el contrato HTTP del backend (`/api/auth`, `/api/ocr`,
