@@ -201,6 +201,7 @@ plataforma.
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` | correo transaccional (465, TLS implícito) |
 | `MAIL_FROM` | se mapea a `SMTP_FROM` |
 | `TRUSTED_PROXY_CIDR` | subred de Traefik: nginx solo acepta `X-Forwarded-For` desde ahí |
+| `UMAMI_SCRIPT_URL`, `UMAMI_WEBSITE_ID` | analítica con Umami; vacías = sin analítica (ver abajo) |
 
 Comprobación antes de pedir un despliegue, sin ningún `.env`:
 
@@ -237,6 +238,35 @@ mundo tendrá la IP de Traefik y el rate limit contará a todos como un
 cliente. Comprobación tras desplegar: pedir con
 `curl -H 'X-Forwarded-For: 1.2.3.4' https://.../api/...` y verificar en los
 logs de pino que la IP registrada es la real, no `1.2.3.4` ni la de Traefik.
+
+### Analítica (Umami)
+
+La web se mide con el Umami de la plataforma (`https://stats.yunitztech.com`).
+No hace falta reconstruir la imagen para activarla o cambiar de web: al
+arrancar, `infra/nginx/16-analytics.sh` lee `UMAMI_SCRIPT_URL` y
+`UMAMI_WEBSITE_ID` y escribe en `/etc/nginx/conf.d` (el tmpfs: el contenedor es
+de solo lectura):
+
+- `analytics.inc`: un `sub_filter` que inserta
+  `<script defer … data-domains="myschoolmyparents.online" data-exclude-search="true">`
+  antes de `</head>` en `index.html`, por donde pasan todas las rutas de la SPA.
+- `analytics.conf`: el origen de Umami para `script-src` y `connect-src` de la
+  CSP (variable `$analytics_src` en `security-headers.conf`).
+
+Con las variables vacías no se carga nada de terceros y la CSP no menciona
+Umami. Los valores se validan (URL `https://` y UUID): si no cumplen, nginx no
+arranca, en vez de colar texto arbitrario en el HTML.
+
+- `data-domains`: solo cuenta visitas en producción, no en local ni en
+  previsualizaciones.
+- `data-exclude-search`: nunca envía la *query string*, así que tokens o datos
+  personales en la URL no llegan a la analítica.
+- Las rutas de la SPA las sigue Umami escuchando el historial: no hay código
+  de analítica en el frontend.
+
+Umami no usa cookies ni guarda datos personales: no hace falta banner de
+consentimiento, pero debe nombrarse en la política de privacidad (la web aún
+no tiene una).
 
 ### Correo transaccional
 

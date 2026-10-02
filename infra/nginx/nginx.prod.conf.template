@@ -70,10 +70,14 @@ server {
   }
 
   # Entrada de la SPA: nunca cacheada (así los despliegues entran en vigor).
+  # Aquí se inserta el script de Umami si está configurado (vacío si no; lo
+  # genera 16-analytics.sh al arrancar). Todas las rutas de la SPA acaban en
+  # esta location a través del try_files de abajo.
   location = /index.html {
     expires -1;
     add_header Cache-Control "no-store" always;
     include /etc/nginx/snippets/security-headers.conf;
+    include /etc/nginx/conf.d/analytics.inc;
   }
 
   # SPA: cualquier ruta no estática sirve index.html.

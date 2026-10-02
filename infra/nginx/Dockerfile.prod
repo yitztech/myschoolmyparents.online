@@ -27,4 +27,6 @@ COPY --from=frontend-build /app/dist /usr/share/nginx/html
 # (un tmpfs en el compose, porque el resto del sistema es de solo lectura).
 COPY infra/nginx/nginx.prod.conf.template /etc/nginx/templates/default.conf.template
 COPY infra/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
+# Analítica con Umami: se activa al arrancar según UMAMI_* (sin reconstruir).
+COPY --chmod=755 infra/nginx/16-analytics.sh /docker-entrypoint.d/16-analytics.sh
 EXPOSE 80

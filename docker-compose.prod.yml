@@ -135,6 +135,10 @@ services:
     environment:
       # Subred de Traefik: solo desde ahí se acepta X-Forwarded-For.
       TRUSTED_PROXY_CIDR: ${TRUSTED_PROXY_CIDR:?Falta TRUSTED_PROXY_CIDR (subred de Traefik)}
+      # Analítica con Umami. Vacías = sin analítica: no se carga nada de
+      # terceros (ver infra/nginx/16-analytics.sh).
+      UMAMI_SCRIPT_URL: ${UMAMI_SCRIPT_URL:-}
+      UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
     depends_on:
       backend:
         condition: service_healthy
