@@ -430,6 +430,67 @@ export class AppDatabase {
     for (const f of new Set(files)) this.deleteFile(f);
   }
 
+  /**
+   * Aplica un libro remoto (sincronización). `insert` crea el libro nuevo; `replace`
+   * sustituye páginas y párrafos de uno existente conservando los archivos locales.
+   */
+  async applyRemoteBook(
+    remote: {
+      id: string;
+      title: string;
+      homeLocale: string;
+      learningLocale: string;
+      voiceId: string | null;
+      speechRate: number;
+      lastParagraph: number;
+      lastOffset: number;
+      createdAt: number;
+      updatedAt: number;
+      contentRevision: number;
+      pages: {
+        id: string;
+        orderKey: number;
+        status: string;
+        createdAt: number;
+        paragraphs: { id: string; orderKey: number; content: string; localeOverride: string | null; textRevision: number }[];
+      }[];
+    },
+    mode: 'insert' | 'replace',
+  ) {
+    await this.tx(async () => {
+      if (mode === 'insert') {
+        await this.db.runAsync(
+          `INSERT INTO books (id, title, home_locale, learning_locale, voice_id, speech_rate, last_paragraph,
+           last_offset, created_at, updated_at, content_revision) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+          [remote.id, remote.title, remote.homeLocale, remote.learningLocale, remote.voiceId, remote.speechRate,
+           remote.lastParagraph, remote.lastOffset, remote.createdAt, remote.updatedAt, remote.contentRevision],
+        );
+      } else {
+        await this.db.runAsync(
+          `UPDATE books SET title = ?, home_locale = ?, learning_locale = ?, voice_id = ?, speech_rate = ?,
+           last_paragraph = ?, last_offset = ?, updated_at = ?, content_revision = ? WHERE id = ?`,
+          [remote.title, remote.homeLocale, remote.learningLocale, remote.voiceId, remote.speechRate,
+           remote.lastParagraph, remote.lastOffset, remote.updatedAt, remote.contentRevision, remote.id],
+        );
+        await this.db.runAsync('DELETE FROM paragraphs WHERE book_id = ?', [remote.id]);
+        await this.db.runAsync('DELETE FROM pages WHERE book_id = ?', [remote.id]);
+      }
+      for (const page of remote.pages) {
+        await this.db.runAsync(
+          'INSERT INTO pages (id, book_id, order_key, status, created_at) VALUES (?,?,?,?,?)',
+          [page.id, remote.id, page.orderKey, page.status, page.createdAt],
+        );
+        for (const para of page.paragraphs) {
+          await this.db.runAsync(
+            `INSERT INTO paragraphs (id, book_id, page_id, order_key, content, locale_override, text_revision)
+             VALUES (?,?,?,?,?,?,?)`,
+            [para.id, remote.id, page.id, para.orderKey, para.content, para.localeOverride, para.textRevision],
+          );
+        }
+      }
+    });
+  }
+
   /** Crea un libro completo ya aprobado (importación desde un archivo exportado). */
   async importProcessedBook(p: {
     title: string;

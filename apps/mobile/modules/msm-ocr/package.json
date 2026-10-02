@@ -1,0 +1,10 @@
+{
+  "name": "msm-ocr",
+  "version": "1.0.0",
+  "description": "OCR en el dispositivo (ML Kit en Android, Apple Vision en iOS) y lectura de PDF para MySchoolMyParents Online",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "author": "MySchoolMyParents Online",
+  "license": "UNLICENSED",
+  "homepage": "https://myschoolmyparents.online"
+}

@@ -1,12 +1,69 @@
 {
-  "plugins": [
-    "expo-status-bar",
-    "expo-sqlite",
-    "expo-sharing",
-    "expo-secure-store",
-    "expo-font",
-    "expo-asset",
-    "expo-splash-screen",
-    "expo-localization"
-  ]
+  "expo": {
+    "name": "MySchoolMyParents Online",
+    "slug": "myschoolmyparents",
+    "version": "0.3.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "orientation": "default",
+    "scheme": "myschoolmyparents",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "online.myschoolmyparents",
+      "buildNumber": "5",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "online.myschoolmyparents",
+      "versionCode": 5,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1d4ed8"
+      },
+      "permissions": ["CAMERA", "INTERNET"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Elegir fotos de páginas para extraer y escuchar su texto.",
+          "cameraPermission": "Tomar fotos de páginas para practicar la lectura.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#fdfbf7",
+          "image": "./assets/branding/my_school_my_parents_logo.png",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": ["./assets/fonts/Nunito.ttf", "./assets/fonts/Nunito-Italic.ttf"]
+        }
+      ],
+      "expo-sharing"
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:8080/api",
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
 }
