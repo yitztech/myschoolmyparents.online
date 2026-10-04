@@ -24,7 +24,7 @@ export function Terminos() {
       <H2>3. Tu cuenta</H2>
       <UL>
         <li>Para crear una cuenta tienes que ser mayor de edad. Los menores usan el servicio con una persona adulta responsable.</li>
-        <li>Los datos que nos das deben ser verdaderos, y tienes que cuidar tu contraseña. Avísanos si crees que alguien entró en tu cuenta.</li>
+        <li>Los datos que nos das deben ser verdaderos. Si creas una cuenta con contraseña, tienes que cuidarla; si accedes con Google, eres responsable de la seguridad de tu cuenta de Google. Avísanos si crees que alguien entró en tu cuenta.</li>
         <li>En las apps puedes usar el modo invitado sin cuenta: todo queda en el teléfono.</li>
         <li>Puedes eliminar tu cuenta cuando quieras desde <A href="/legal/eliminar-cuenta">Eliminar tu cuenta</A>.</li>
       </UL>

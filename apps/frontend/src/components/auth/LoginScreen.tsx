@@ -10,7 +10,7 @@ import { GoogleButton } from './GoogleButton';
 import type { AuthView } from './AuthNavigator';
 
 export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void }) {
-  const { login } = useAuth();
+  const { login, oauthError, clearOAuthError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
@@ -20,6 +20,7 @@ export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    clearOAuthError();
     if (!isEmailValid(email)) {
       setError('Escribe un correo electrónico válido.');
       return;
@@ -38,6 +39,8 @@ export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void 
       setBusy(false);
     }
   }
+
+  const errorMessage = error || oauthError;
 
   return (
     <AuthLayout title="Iniciar sesión" subtitle="Bienvenido de nuevo. Tus libros te están esperando.">
@@ -66,7 +69,7 @@ export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void 
             </button>
           </div>
         </div>
-        {error && <p role="alert" className="rounded-xl border-2 border-coral-deep bg-[#FFE9E0] p-3 text-sm font-bold text-coral-deep">{error}</p>}
+        {errorMessage && <p role="alert" className="rounded-xl border-2 border-coral-deep bg-[#FFE9E0] p-3 text-sm font-bold text-coral-deep">{errorMessage}</p>}
         <Button type="submit" variant="coral" className="w-full" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</Button>
       </form>
 

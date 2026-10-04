@@ -98,6 +98,9 @@ services:
       SMTP_USER: ${SMTP_USER:?Falta SMTP_USER}
       SMTP_PASSWORD: ${SMTP_PASSWORD:?Falta SMTP_PASSWORD}
       SMTP_FROM: ${MAIL_FROM:?Falta MAIL_FROM}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
     depends_on:
       db:
         condition: service_healthy

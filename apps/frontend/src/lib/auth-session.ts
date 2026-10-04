@@ -9,6 +9,9 @@ export interface AuthUser {
   name: string;
   email: string;
   provider: 'email' | 'google';
+  /** false en cuentas creadas con Google que aún no tienen contraseña. */
+  hasPassword?: boolean;
+  googleLinked?: boolean;
   avatarUrl?: string;
 }
 

@@ -26,7 +26,7 @@ export function Privacidad() {
       <H2>2. Lo esencial</H2>
       <UL>
         <li>Tus libros, fotos y textos <strong>se guardan solo en tu dispositivo</strong>; no los recibimos.</li>
-        <li>Para tener cuenta solo pedimos <strong>nombre, correo y contraseña</strong>. La contraseña se guarda cifrada (hash), nunca en claro.</li>
+        <li>Para tener cuenta pedimos <strong>nombre, correo y contraseña</strong> (o iniciar sesión con tu cuenta de Google). Las contraseñas se guardan cifradas (hash), nunca en claro.</li>
         <li>No vendemos datos, no mostramos publicidad y no usamos cookies de seguimiento.</li>
         <li>La analítica de la web es anónima y sin cookies.</li>
       </UL>
@@ -35,9 +35,11 @@ export function Privacidad() {
 
       <H3>Cuenta</H3>
       <P>
-        Nombre, correo electrónico y contraseña (guardada como hash bcrypt), con las fechas de alta y de última
-        modificación. Sirven para crear la cuenta e iniciar sesión. La sesión dura 7 días como máximo y se cierra en
-        todos los dispositivos si cambias la contraseña.
+        Nombre, correo electrónico y, si te registras con contraseña, su hash bcrypt. Si decides acceder con Google,
+        recibimos de Google únicamente tu nombre, tu correo electrónico verificado y tu identificador de usuario (<code>sub</code>)
+        para autenticarte. No accedemos a tu contraseña de Google, ni a tus contactos ni a ningún otro dato personal de Google.
+        Sirven para crear la cuenta e iniciar sesión. La sesión dura 7 días como máximo y se cierra en todos los dispositivos si
+        cambias la contraseña.
       </P>
 
       <H3>Recuperación de contraseña</H3>

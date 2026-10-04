@@ -11,6 +11,9 @@
  *   POST {API}/auth/password/recover  { email }                 -> { ok: true }
  *   POST {API}/auth/password/reset    { email, code, newPassword } -> { ok: true }
  *   GET  {API}/auth/me  (Authorization: Bearer <token>) -> { user }
+ *   GET  {API}/auth/providers         -> { google: boolean }
+ *   GET  {API}/auth/google?returnTo=… -> Google -> vuelve a returnTo#auth=google&token=…
+ *   POST {API}/auth/account/delete    { password } | { confirmEmail } -> { ok: true }
  *
  * Con VITE_AUTH_API_URL vacío se usa el mock de localStorage
  * (`auth-mock.ts`), que SOLO existe en desarrollo: el build de producción
@@ -37,7 +40,29 @@ export const isMockMode = RAW_API.trim() === '';
 /** Vida de la sesión en el cliente; el backend manda con su propio `exp`. */
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
-/** Google solo está disponible si hay OAuth configurado; hoy no lo hay. */
+let providersPromise: Promise<{ google: boolean }> | null = null;
+
+/**
+ * Métodos de acceso disponibles. Lo decide el backend (¿tiene GOOGLE_CLIENT_ID
+ * y GOOGLE_CLIENT_SECRET?), no una variable horneada en el build: así activar
+ * Google es poner dos variables en el servidor, sin recompilar la web.
+ * Si el backend no responde, Google no se ofrece.
+ */
+export function fetchProviders(): Promise<{ google: boolean }> {
+  if (isMockMode) return Promise.resolve({ google: true });
+  providersPromise ??= api<{ google?: boolean }>('/auth/providers')
+    .then((p) => ({ google: p.google === true }))
+    .catch(() => {
+      providersPromise = null;
+      return { google: false };
+    });
+  return providersPromise;
+}
+
+/**
+ * Indicador síncrono inicial (mock mode o variable build-time VITE_GOOGLE_CLIENT_ID).
+ * El estado reactivo actualizado se obtiene desde useAuth().googleEnabled.
+ */
 export const isGoogleEnabled =
   isMockMode || Boolean((import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim());
 
@@ -73,8 +98,42 @@ function sessionFrom(data: { user: AuthUser; token: string }): AuthSession {
 /** URL para iniciar el alta/login con Google (flujo OAuth del backend). */
 export function getGoogleOAuthUrl(returnTo?: string): string {
   if (isMockMode) return '#mock-google';
-  const rt = returnTo ?? window.location.origin;
+  const rt = returnTo ?? `${window.location.origin}${window.location.pathname}`;
   return `${API}/auth/google?returnTo=${encodeURIComponent(rt)}`;
+}
+
+const OAUTH_ERRORS: Record<string, string> = {
+  cancelled: 'Cancelaste el acceso con Google. Puedes intentarlo de nuevo cuando quieras.',
+  state: 'El acceso con Google caducó o se abrió en otra pestaña. Inténtalo de nuevo.',
+  unverified: 'Tu cuenta de Google no tiene el correo verificado. Verifícalo en Google o usa correo y contraseña.',
+  conflict: 'Ese correo ya está enlazado a otra cuenta de Google. Entra con esa cuenta o con tu contraseña.',
+  disabled: 'El acceso con Google no está disponible ahora mismo. Usa tu correo y contraseña.',
+  failed: 'No se pudo completar el acceso con Google. Inténtalo de nuevo en unos minutos.',
+};
+
+/**
+ * Lee la vuelta del backend tras Google (#auth=google&token=… o
+ * #auth_error=…) y limpia la URL al momento, para que el token no se quede
+ * en el historial ni en un enlace copiado.
+ */
+export function consumeOAuthRedirect(): { token: string } | { error: string } | null {
+  const hash = window.location.hash.replace(/^#/, '');
+  if (!hash) return null;
+  const params = new URLSearchParams(hash);
+  const token = params.get('auth') === 'google' ? params.get('token') : null;
+  const error = params.get('auth_error');
+  if (!token && !error) return null;
+  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+  if (token) return { token };
+  return { error: OAUTH_ERRORS[error ?? ''] ?? OAUTH_ERRORS.failed };
+}
+
+/** Convierte el token recibido de Google en una sesión, validándolo con /auth/me. */
+export async function completeGoogleSignIn(token: string): Promise<AuthSession> {
+  const { user } = await api<{ user: AuthUser }>('/auth/me', undefined, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return sessionFrom({ user, token });
 }
 
 // ---------- operaciones ----------
@@ -127,12 +186,15 @@ export async function confirmPasswordReset(email: string, code: string, newPassw
   await api<{ ok: boolean }>('/auth/password/reset', { email: cleanEmail, code, newPassword });
 }
 
-/** Elimina la cuenta de la sesión actual (pide la contraseña) y cierra la sesión. */
-export async function deleteAccount(password: string): Promise<void> {
+/**
+ * Elimina la cuenta de la sesión actual y cierra la sesión. Se confirma con
+ * la contraseña o, si la cuenta es solo de Google, con su correo.
+ */
+export async function deleteAccount(confirm: { password?: string; confirmEmail?: string }): Promise<void> {
   if (import.meta.env.DEV && isMockMode) {
-    await (await import('./auth-mock')).deleteAccount(getStoredSession()?.user.email ?? '', password);
+    await (await import('./auth-mock')).deleteAccount(getStoredSession()?.user.email ?? '', confirm.password ?? '');
   } else {
-    await api<{ ok: boolean }>('/auth/account/delete', { password }, { headers: authHeaders() });
+    await api<{ ok: boolean }>('/auth/account/delete', confirm, { headers: authHeaders() });
   }
   storeSession(null);
 }

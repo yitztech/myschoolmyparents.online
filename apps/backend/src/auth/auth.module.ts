@@ -5,6 +5,7 @@ import { MailModule } from '../mail/mail.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { GoogleOAuthService } from './google-oauth.service';
 import { expiresInSeconds } from './expires-in';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
@@ -21,7 +22,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard],
+  providers: [AuthService, GoogleOAuthService, JwtAuthGuard],
   // Se exportan también JwtModule y UsersModule: quien importe AuthModule
   // para usar @UseGuards(JwtAuthGuard) (p. ej. OcrModule) instancia el guard
   // en SU propio contexto, así que necesita resolver ahí JwtService y

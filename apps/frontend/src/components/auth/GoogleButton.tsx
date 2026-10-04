@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../lib/auth-context';
-import { getGoogleOAuthUrl, isGoogleEnabled, isMockMode, AuthError } from '../../lib/auth';
+import { getGoogleOAuthUrl, isMockMode, AuthError } from '../../lib/auth';
 import { isEmailValid } from '../../lib/password';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -26,7 +26,7 @@ function GoogleIcon() {
  * no se pinta.
  */
 export function GoogleButton({ mode }: { mode: 'register' | 'login' }) {
-  const { loginGoogle } = useAuth();
+  const { loginGoogle, googleEnabled } = useAuth();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -64,7 +64,7 @@ export function GoogleButton({ mode }: { mode: 'register' | 'login' }) {
     }
   }
 
-  if (!isGoogleEnabled) return null;
+  if (!googleEnabled) return null;
 
   return (
     <>

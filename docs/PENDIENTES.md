@@ -23,7 +23,7 @@ scripts, `tsc` y `expo-doctor` limpios, Metro empaqueta Android e iOS.
       (sin tocar datos locales) hasta que exista. Contrato en `apps/mobile/src/sync/`.
 - [ ] **Migración en sitio de los libros de Flutter**: hoy se pasan con Exportar/Importar. Mejora posible: abrir el
       archivo de Drift y convertir fechas (segundos → ms). Ver `docs/ADR-0002-migracion-a-expo.md`.
-- [ ] Google Sign-In: el backend responde `410`; la app no lo ofrece.
+- [x] **Google Sign-In en la web**: implementado en backend (`/api/auth/google`, `/callback`, `/providers`) y frontend con OAuth 2.0 PKCE (se activa al configurar `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`). En la app móvil queda pendiente si se desea añadir nativo.
 
 ## Pulido de la app
 

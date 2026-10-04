@@ -40,4 +40,16 @@ export default () => ({
     password: process.env.SMTP_PASSWORD ?? '',
     from: process.env.SMTP_FROM ?? '',
   },
+  // Inicio de sesión con Google (OAuth 2.0 / OpenID Connect). Sin id o sin
+  // secreto queda desactivado: /api/auth/google responde 410 y el frontend
+  // no pinta el botón. La URI de retorno tiene que coincidir EXACTAMENTE con
+  // una de las «URIs de redireccionamiento autorizados» del cliente OAuth.
+  google: {
+    clientId: (process.env.GOOGLE_CLIENT_ID ?? '').trim(),
+    clientSecret: (process.env.GOOGLE_CLIENT_SECRET ?? '').trim(),
+    redirectUri: (
+      process.env.GOOGLE_REDIRECT_URI ||
+      `${(process.env.APP_PUBLIC_URL ?? 'http://localhost:6060').replace(/\/$/, '')}/api/auth/google/callback`
+    ).trim(),
+  },
 });

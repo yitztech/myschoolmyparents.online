@@ -11,7 +11,7 @@ import { PasswordChecklist } from './PasswordChecklist';
 import type { AuthView } from './AuthNavigator';
 
 export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => void }) {
-  const { register } = useAuth();
+  const { register, oauthError, clearOAuthError } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,6 +23,7 @@ export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => vo
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    clearOAuthError();
     if (name.trim().length < 2) {
       setError('Escribe tu nombre (mínimo 2 letras).');
       return;
@@ -88,7 +89,7 @@ export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => vo
             <p role="alert" className="mt-1 text-sm font-bold text-coral-deep">Las contraseñas no coinciden.</p>
           )}
         </div>
-        {error && <p role="alert" className="rounded-xl border-2 border-coral-deep bg-[#FFE9E0] p-3 text-sm font-bold text-coral-deep">{error}</p>}
+        {(error || oauthError) && <p role="alert" className="rounded-xl border-2 border-coral-deep bg-[#FFE9E0] p-3 text-sm font-bold text-coral-deep">{error || oauthError}</p>}
         <Button type="submit" variant="coral" className="w-full" disabled={busy}>{busy ? 'Creando cuenta…' : 'Crear cuenta'}</Button>
         <p className="text-center text-xs font-medium text-ink-soft">
           Al crear la cuenta aceptas los{' '}

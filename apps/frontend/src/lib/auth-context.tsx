@@ -1,10 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   AuthError,
+  completeGoogleSignIn,
   confirmPasswordReset,
+  consumeOAuthRedirect,
   deleteAccount as svcDeleteAccount,
   fetchMe,
+  fetchProviders,
   getStoredSession,
+  isGoogleEnabled as isGoogleDefault,
   loginWithEmail,
   loginWithGoogle,
   logout as svcLogout,
@@ -18,30 +22,76 @@ interface AuthContextValue {
   user: AuthUser | null;
   session: AuthSession | null;
   loading: boolean;
+  googleEnabled: boolean;
+  oauthError: string | null;
+  clearOAuthError: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   loginGoogle: (name: string, email: string) => Promise<void>;
   requestReset: (email: string) => Promise<{ devCode?: string }>;
   confirmReset: (email: string, code: string, newPassword: string) => Promise<void>;
   logout: () => void;
-  deleteAccount: (password: string) => Promise<void>;
+  deleteAccount: (confirm: string | { password?: string; confirmEmail?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [initialRedirect] = useState(() => consumeOAuthRedirect());
   const [session, setSession] = useState<AuthSession | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    if (initialRedirect && 'token' in initialRedirect) return true;
+    return Boolean(getStoredSession());
+  });
+  const [googleEnabled, setGoogleEnabled] = useState(isGoogleDefault);
+  const [oauthError, setOauthError] = useState<string | null>(() => {
+    return initialRedirect && 'error' in initialRedirect ? initialRedirect.error : null;
+  });
 
-  // Al arrancar no basta con leer localStorage: ese objeto lo puede escribir
-  // cualquiera desde la consola del navegador, y además el token puede haber
-  // sido revocado (cambio de contraseña) o caducado en el servidor. Se
-  // revalida contra /auth/me.
+  const clearOAuthError = useCallback(() => setOauthError(null), []);
+
+  // Consultar si el backend tiene OAuth con Google configurado
   useEffect(() => {
     let cancelled = false;
+    void fetchProviders()
+      .then((p) => {
+        if (!cancelled) setGoogleEnabled(p.google);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Comprobar redirección OAuth de Google o sesión guardada
+  useEffect(() => {
+    let cancelled = false;
+
+    // 1. ¿Venimos de una redirección OAuth de Google con token?
+    if (initialRedirect && 'token' in initialRedirect) {
+      void completeGoogleSignIn(initialRedirect.token)
+        .then((s) => {
+          if (!cancelled) setSession(s);
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setOauthError(err instanceof AuthError ? err.message : 'No se pudo iniciar sesión con Google.');
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // 2. Al arrancar no basta con leer localStorage: ese objeto lo puede escribir
+    // cualquiera desde la consola del navegador, y además el token puede haber
+    // sido revocado (cambio de contraseña) o caducado en el servidor. Se
+    // revalida contra /auth/me.
     const stored = getStoredSession();
     if (!stored) {
-      setLoading(false);
       return;
     }
     void (async () => {
@@ -72,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialRedirect]);
 
   const login = useCallback(async (email: string, password: string) => {
     const s = await loginWithEmail(email, password);
@@ -97,8 +147,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   }, []);
 
-  const deleteAccount = useCallback(async (password: string) => {
-    await svcDeleteAccount(password);
+  const deleteAccount = useCallback(async (confirm: string | { password?: string; confirmEmail?: string }) => {
+    const payload = typeof confirm === 'string' ? { password: confirm } : confirm;
+    await svcDeleteAccount(payload);
     setSession(null);
   }, []);
 
@@ -107,6 +158,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       session,
       loading,
+      googleEnabled,
+      oauthError,
+      clearOAuthError,
       login,
       register,
       loginGoogle,
@@ -115,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       deleteAccount,
     }),
-    [session, loading, login, register, loginGoogle, requestReset, confirmReset, logout, deleteAccount]
+    [session, loading, googleEnabled, oauthError, clearOAuthError, login, register, loginGoogle, requestReset, confirmReset, logout, deleteAccount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

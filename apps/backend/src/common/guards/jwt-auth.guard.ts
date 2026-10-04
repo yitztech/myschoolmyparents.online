@@ -20,7 +20,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Sesión no válida. Vuelve a iniciar sesión.');
     }
     try {
-      const payload = await this.jwt.verifyAsync<{ sub: string; tv?: number }>(token, {
+      const payload = await this.jwt.verifyAsync<{ sub: string; tv?: number; iat?: number }>(token, {
         secret: this.config.get<string>('jwtSecret'),
       });
       const user = await this.users.findById(payload.sub);
@@ -32,6 +32,9 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException('Tu contraseña cambió. Vuelve a iniciar sesión.');
       }
       req.user = user;
+      // Momento de emisión (segundos): algunas operaciones piden una sesión
+      // reciente (p. ej. borrar una cuenta sin contraseña).
+      req.tokenIssuedAt = payload.iat;
       return true;
     } catch (e) {
       if (e instanceof UnauthorizedException) throw e;

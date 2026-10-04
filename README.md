@@ -77,11 +77,12 @@ Réplica web de la app MyParentMyChildren (Flutter) con **React + shadcn + Docke
 
 ## Backend (NestJS + Fastify)
 
-- **Auth solo local:** `POST /api/auth/register` y `/login` → `{ user, token }`
+- **Auth local + Google OAuth:** `POST /api/auth/register` y `/login` → `{ user, token }`
   (JWT 7d); `POST /api/auth/password/recover|reset` (código de 6 dígitos,
   15 min, enviado por correo); `GET /api/auth/me` con `Authorization: Bearer`.
-  Sin OAuth: `GET /api/auth/google` responde **410 Gone** y el frontend
-  oculta el botón de Google salvo que se configure `VITE_GOOGLE_CLIENT_ID`.
+  OAuth con Google: `GET /api/auth/providers`, `GET /api/auth/google` y `/callback`
+  (si no se configuran `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`, responde
+  **410 Gone** y el frontend oculta el botón de Google).
 - **OCR con sesión:** `POST /api/ocr` exige `Authorization: Bearer`. Es la
   operación más cara del backend, así que su coste queda ligado a una cuenta.
 - **Seguridad:** helmet (cabeceras), CORS restringido (`CORS_ORIGIN`), rate-limit

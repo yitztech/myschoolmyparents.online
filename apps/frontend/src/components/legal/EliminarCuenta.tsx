@@ -16,10 +16,13 @@ import { APP_NAME, LEGAL } from '../../legal/site';
 export function EliminarCuenta() {
   const { user, deleteAccount } = useAuth();
   const [password, setPassword] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [borrarLocal, setBorrarLocal] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hecho, setHecho] = useState(false);
+
+  const isGoogleOnly = user?.hasPassword === false;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -27,7 +30,7 @@ export function EliminarCuenta() {
     if (!window.confirm('¿Eliminar tu cuenta para siempre? No se puede deshacer.')) return;
     setBusy(true);
     try {
-      await deleteAccount(password);
+      await deleteAccount(isGoogleOnly ? { confirmEmail } : { password });
       if (borrarLocal) {
         speech.stop();
         await Promise.all(db.tables.map((t) => t.clear()));
@@ -49,7 +52,7 @@ export function EliminarCuenta() {
 
       <H2>Qué se borra</H2>
       <UL>
-        <li>De nuestro servidor: tu nombre, tu correo, el hash de tu contraseña y cualquier código de recuperación pendiente.</li>
+        <li>De nuestro servidor: tu nombre, tu correo, el hash de tu contraseña (si creaste una) o el identificador de Google enlazado, y cualquier código de recuperación pendiente.</li>
         <li>Las sesiones abiertas dejan de funcionar en todos los dispositivos.</li>
         <li>
           Tus libros nunca llegan a nuestro servidor: viven en tu dispositivo. En este navegador puedes borrarlos a la vez
@@ -68,22 +71,41 @@ export function EliminarCuenta() {
         </p>
       ) : user ? (
         <form onSubmit={onSubmit} className="mt-4 grid max-w-md gap-4">
-          <P>
-            Has iniciado sesión como <strong>{user.email}</strong>. Escribe tu contraseña para confirmar.
-          </P>
-          <div>
-            <Label htmlFor="del-password">Contraseña</Label>
-            <Input
-              id="del-password" type="password" autoComplete="current-password" required
-              value={password} onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+          {isGoogleOnly ? (
+            <>
+              <P>
+                Has iniciado sesión con Google como <strong>{user.email}</strong>. Por seguridad, escribe tu
+                correo electrónico para confirmar la eliminación.
+              </P>
+              <div>
+                <Label htmlFor="del-email">Correo electrónico de la cuenta</Label>
+                <Input
+                  id="del-email" type="email" autoComplete="email" required
+                  value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)}
+                  placeholder={user.email}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <P>
+                Has iniciado sesión como <strong>{user.email}</strong>. Escribe tu contraseña para confirmar.
+              </P>
+              <div>
+                <Label htmlFor="del-password">Contraseña</Label>
+                <Input
+                  id="del-password" type="password" autoComplete="current-password" required
+                  value={password} onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </>
+          )}
           <label className="flex items-start gap-2 text-sm font-medium">
             <input type="checkbox" className="mt-1 h-4 w-4" checked={borrarLocal} onChange={(e) => setBorrarLocal(e.target.checked)} />
             Borrar también los libros guardados en este navegador
           </label>
           {error && <p role="alert" className="rounded-xl border-2 border-coral-deep bg-[#FFE9E0] p-3 text-sm font-bold text-coral-deep">{error}</p>}
-          <Button type="submit" variant="coral" disabled={busy || !password}>{busy ? 'Eliminando…' : 'Eliminar mi cuenta'}</Button>
+          <Button type="submit" variant="coral" disabled={busy || (isGoogleOnly ? !confirmEmail : !password)}>{busy ? 'Eliminando…' : 'Eliminar mi cuenta'}</Button>
         </form>
       ) : (
         <P>
