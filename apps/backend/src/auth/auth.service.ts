@@ -19,6 +19,7 @@ import { RegisterDto } from './dto/register.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { ResetDto } from './dto/reset.dto';
 import { User } from '../users/user.entity';
+import type { GoogleProfile } from './google-oauth.service';
 
 /** Hash fijo para igualar tiempos cuando el correo no existe (anti-enumeración). */
 const DUMMY_HASH = '$2b$12$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -34,6 +35,8 @@ const RESET_MAX_ATTEMPTS = 10;
 const RESET_WINDOW_MS = 60 * 60 * 1000;
 /** Un correo de recuperación por cuenta y minuto. */
 const RESET_RESEND_MS = 60 * 1000;
+/** Cuentas sin contraseña: para borrarlas hace falta haber entrado hace poco. */
+const RECENT_LOGIN_MS = 10 * 60 * 1000;
 
 /**
  * Anti-fuerza-bruta en login, en dos niveles y con la misma ventana:
@@ -143,7 +146,11 @@ export class AuthService {
     const existing = await this.users.findByEmail(email);
     if (existing) {
       this.logger.warn({ email }, 'auth.register correo ya registrado');
-      throw new ConflictException('Ese correo ya está registrado. Prueba a iniciar sesión.');
+      throw new ConflictException(
+        existing.passwordHash
+          ? 'Ese correo ya está registrado. Prueba a iniciar sesión.'
+          : 'Ese correo ya tiene cuenta con Google: entra con «Continuar con Google».',
+      );
     }
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = await this.users.create({ name: dto.name, email, passwordHash });
@@ -274,17 +281,79 @@ export class AuthService {
   }
 
   /**
+   * Alta o inicio de sesión con un perfil de Google ya verificado
+   * (GoogleOAuthService comprueba emisor, audiencia, nonce y correo).
+   *
+   * 1. Cuenta ya enlazada a ese `sub`: entra.
+   * 2. Cuenta con ese correo sin enlazar: se enlaza. Como el registro por
+   *    correo no verifica el buzón, alguien pudo crearla antes con el correo
+   *    de la víctima y una contraseña suya, esperando a que la víctima
+   *    entrase con Google («pre-hijacking»). Por eso, al enlazar, se anula la
+   *    contraseña y se cierran las sesiones abiertas: quien tenga de verdad
+   *    el buzón puede crear otra con «¿Olvidaste tu contraseña?».
+   * 3. Nadie con ese correo: cuenta nueva, sin contraseña.
+   */
+  async googleSignIn(profile: GoogleProfile) {
+    let user = await this.users.findByGoogleSub(profile.sub);
+    if (user) {
+      this.logger.info({ userId: user.id }, 'auth.google inicio de sesión');
+    } else {
+      const byEmail = await this.users.findByEmail(profile.email);
+      if (byEmail) {
+        if (byEmail.googleSub) {
+          // El correo ya está enlazado a OTRA cuenta de Google (p. ej. el
+          // usuario cambió de cuenta y Google reutilizó el correo): no se
+          // pisa el enlace existente.
+          this.logger.warn({ userId: byEmail.id }, 'auth.google correo enlazado a otro sub');
+          throw new ConflictException('Ese correo ya está enlazado a otra cuenta de Google.');
+        }
+        const hadPassword = Boolean(byEmail.passwordHash);
+        await this.users.update(byEmail.id, {
+          googleSub: profile.sub,
+          provider: 'google',
+          passwordHash: null,
+          tokenVersion: () => 'token_version + 1',
+        });
+        user = (await this.users.findById(byEmail.id))!;
+        this.clearFails(profile.email);
+        this.logger.info({ userId: user.id, hadPassword }, 'auth.google cuenta existente enlazada');
+      } else {
+        user = await this.users.createFromGoogle({ name: profile.name, email: profile.email, googleSub: profile.sub });
+        this.logger.info({ userId: user.id }, 'auth.google alta de cuenta');
+      }
+    }
+    return { user: user.toPublic(), token: await this.sign(user) };
+  }
+
+  /**
    * Borra la cuenta (y con ella nombre, correo, hash y códigos de
    * recuperación). Los libros nunca llegan al servidor: viven en el
    * dispositivo. La contraseña fallida cuenta como un intento de login más,
    * así que tampoco sirve para adivinarla.
+   *
+   * Las cuentas sin contraseña (creadas con Google) confirman escribiendo su
+   * correo, y solo con una sesión recién iniciada: un token robado de hace
+   * días no basta para borrarle la cuenta a nadie.
    */
-  async deleteAccount(user: User, dto: DeleteAccountDto, ip: string) {
-    this.checkBruteForce(user.email, ip);
-    if (!(await bcrypt.compare(dto.password, user.passwordHash))) {
-      this.noteFail(user.email, ip);
-      this.logger.warn({ userId: user.id, ip }, 'auth.delete contraseña incorrecta');
-      throw new UnauthorizedException('La contraseña no es correcta.');
+  async deleteAccount(user: User, dto: DeleteAccountDto, ip: string, tokenIssuedAt?: number) {
+    if (user.passwordHash) {
+      this.checkBruteForce(user.email, ip);
+      if (!dto.password || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+        this.noteFail(user.email, ip);
+        this.logger.warn({ userId: user.id, ip }, 'auth.delete contraseña incorrecta');
+        throw new UnauthorizedException('La contraseña no es correcta.');
+      }
+    } else {
+      if ((dto.confirmEmail ?? '').trim().toLowerCase() !== user.email) {
+        throw new UnauthorizedException('Escribe el correo de tu cuenta para confirmar.');
+      }
+      const ageMs = Date.now() - (tokenIssuedAt ?? 0) * 1000;
+      if (ageMs > RECENT_LOGIN_MS) {
+        this.logger.warn({ userId: user.id }, 'auth.delete sesión demasiado antigua');
+        throw new UnauthorizedException(
+          'Por seguridad, vuelve a entrar con Google y repite la eliminación en los próximos minutos.',
+        );
+      }
     }
     await this.users.remove(user.id);
     this.clearFails(user.email);

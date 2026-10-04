@@ -15,12 +15,28 @@ export class UsersService {
     return this.repo.findOne({ where: { id } });
   }
 
+  findByGoogleSub(sub: string): Promise<User | null> {
+    return this.repo.findOne({ where: { googleSub: sub } });
+  }
+
   async create(data: { name: string; email: string; passwordHash: string }): Promise<User> {
     const user = this.repo.create({
       name: data.name.trim(),
       email: data.email.trim().toLowerCase(),
       passwordHash: data.passwordHash,
       provider: 'local',
+    });
+    return this.repo.save(user);
+  }
+
+  /** Cuenta nueva creada con Google: sin contraseña hasta que pida una. */
+  async createFromGoogle(data: { name: string; email: string; googleSub: string }): Promise<User> {
+    const user = this.repo.create({
+      name: data.name.trim().slice(0, 120),
+      email: data.email.trim().toLowerCase(),
+      passwordHash: null,
+      googleSub: data.googleSub,
+      provider: 'google',
     });
     return this.repo.save(user);
   }

@@ -1,7 +1,7 @@
 import { BeforeInsert, Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-/** Cuenta local: solo email + contraseña (bcrypt). Sin OAuth en esta versión. */
+/** Cuenta: correo + contraseña (bcrypt) y/o una cuenta de Google enlazada. */
 @Entity('users')
 export class User {
   /** UUID generado en la app (sin depender de extensiones de Postgres). */
@@ -19,11 +19,17 @@ export class User {
   @Column({ length: 180, unique: true })
   email: string;
 
-  @Column({ name: 'password_hash', length: 100 })
-  passwordHash: string;
+  /** NULL en las cuentas creadas con Google que aún no tienen contraseña. */
+  @Column({ name: 'password_hash', type: 'varchar', length: 100, nullable: true })
+  passwordHash: string | null;
 
+  /** Origen de la cuenta: 'local' o 'google'. Informativo. */
   @Column({ length: 10, default: 'local' })
   provider: string;
+
+  /** Claim `sub` de Google: identifica la cuenta de Google enlazada. */
+  @Column({ name: 'google_sub', type: 'varchar', length: 64, nullable: true, unique: true })
+  googleSub: string | null;
 
   @Column({ name: 'reset_code_hash', type: 'varchar', length: 100, nullable: true })
   resetCodeHash: string | null;
@@ -61,6 +67,15 @@ export class User {
   updatedAt: Date;
 
   toPublic() {
-    return { id: this.id, name: this.name, email: this.email, provider: 'email' as const };
+    return {
+      id: this.id,
+      name: this.name,
+      email: this.email,
+      // 'google' solo si la cuenta no tiene contraseña: es lo que decide cómo
+      // se confirma, p. ej., la eliminación de la cuenta.
+      provider: (this.passwordHash ? 'email' : 'google') as 'email' | 'google',
+      hasPassword: Boolean(this.passwordHash),
+      googleLinked: Boolean(this.googleSub),
+    };
   }
 }
