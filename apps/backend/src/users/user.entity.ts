@@ -13,10 +13,10 @@ export class User {
     if (!this.id) this.id = randomUUID();
   }
 
-  @Column({ length: 120 })
+  @Column({ type: 'varchar', length: 120 })
   name: string;
 
-  @Column({ length: 180, unique: true })
+  @Column({ type: 'varchar', length: 180, unique: true })
   email: string;
 
   /** NULL en las cuentas creadas con Google que aún no tienen contraseña. */
@@ -24,8 +24,9 @@ export class User {
   passwordHash: string | null;
 
   /** Origen de la cuenta: 'local' o 'google'. Informativo. */
-  @Column({ length: 10, default: 'local' })
+  @Column({ type: 'varchar', length: 10, default: 'local' })
   provider: string;
+
 
   /** Claim `sub` de Google: identifica la cuenta de Google enlazada. */
   @Column({ name: 'google_sub', type: 'varchar', length: 64, nullable: true, unique: true })

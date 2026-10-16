@@ -13,13 +13,23 @@
     "install:all": "npm ci --prefix apps/backend && npm ci --prefix apps/frontend && npm ci --prefix apps/mobile && npm ci --prefix e2e",
     "build": "npm run build --prefix apps/backend && VITE_AUTH_API_URL=/api npm run build --prefix apps/frontend",
     "lint": "npm run lint --prefix apps/frontend",
+    "test:backend": "npm test --prefix apps/backend",
+    "test:frontend": "npm test --prefix apps/frontend",
+    "test:mobile": "npm run mobile:test",
+    "test:db": "node --import ./apps/backend/node_modules/tsx/dist/loader.mjs --test \"tests/database/*.test.ts\"",
+
+    "test:unit": "npm run test:backend && npm run test:frontend && npm run test:mobile",
+    "test:gherkin": "npm run test:gherkin --prefix e2e",
     "test:e2e": "npm test --prefix e2e",
+    "test:all": "npm run test:backend && npm run test:frontend && npm run test:mobile && npm run test:db",
+    "mobile:dev-certs": "docker compose -f docker/mobile-dev-certs/docker-compose.yml up --build",
     "mobile:test": "npm test --prefix apps/mobile && node --test scripts/test-mobile-scripts.mjs",
     "mobile": "npm run start --prefix apps/mobile",
     "mobile:typecheck": "npm run typecheck --prefix apps/mobile",
     "mobile:version": "node scripts/mobile-version.mjs",
     "mobile:impact": "node scripts/mobile-impact.mjs"
   },
+
   "engines": {
     "node": ">=24"
   }

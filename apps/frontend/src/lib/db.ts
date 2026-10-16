@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type { Book, Page, Paragraph, ImportJob, PageDraft, ImageBlob } from './types';
+import { validateBookTitle, validateParagraphContent } from './validators';
 
 class AppDB extends Dexie {
   books!: Table<Book, string>;
@@ -19,8 +20,32 @@ class AppDB extends Dexie {
       drafts: 'id, bookId, pageId, jobId',
       blobs: 'id',
     });
+
+    this.books.hook('creating', (_primKey, obj) => {
+      const err = validateBookTitle(obj.title);
+      if (err) throw new Error(`Restricción de base de datos fallida en libro: ${err}`);
+    });
+    this.books.hook('updating', (modifications, _primKey, obj) => {
+      const t = ('title' in modifications) ? (modifications as Partial<Book>).title : obj.title;
+      if (t !== undefined) {
+        const err = validateBookTitle(t);
+        if (err) throw new Error(`Restricción de base de datos fallida en libro: ${err}`);
+      }
+    });
+    this.paragraphs.hook('creating', (_primKey, obj) => {
+      const err = validateParagraphContent(obj.content);
+      if (err) throw new Error(`Restricción de base de datos fallida en párrafo: ${err}`);
+    });
+    this.paragraphs.hook('updating', (modifications, _primKey, obj) => {
+      const c = ('content' in modifications) ? (modifications as Partial<Paragraph>).content : obj.content;
+      if (c !== undefined) {
+        const err = validateParagraphContent(c);
+        if (err) throw new Error(`Restricción de base de datos fallida en párrafo: ${err}`);
+      }
+    });
   }
 }
+
 
 export const db = new AppDB();
 

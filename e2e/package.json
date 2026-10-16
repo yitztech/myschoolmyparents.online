@@ -5,9 +5,11 @@
   "description": "Tests end-to-end. Paquete aparte a propósito: no toca las dependencias ni los builds de backend/frontend, y .dockerignore lo deja fuera del contexto de las imágenes.",
   "scripts": {
     "test": "playwright test",
+    "test:gherkin": "playwright test tests/gherkin.spec.ts",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report",
     "install-browsers": "playwright install chromium"
+
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0"

@@ -77,7 +77,7 @@ export const SCHEMA_VERSION = 3;
 export const CREATE_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS books (
     id TEXT PRIMARY KEY NOT NULL,
-    title TEXT NOT NULL,
+    title TEXT NOT NULL CHECK (length(trim(title)) >= 1 AND length(title) <= 150),
     learning_locale TEXT NOT NULL DEFAULT 'en-US',
     home_locale TEXT NOT NULL DEFAULT 'es-MX',
     voice_id TEXT,
@@ -102,10 +102,11 @@ export const CREATE_STATEMENTS = [
     book_id TEXT NOT NULL,
     page_id TEXT NOT NULL,
     order_key INTEGER NOT NULL,
-    content TEXT NOT NULL,
+    content TEXT NOT NULL CHECK (length(content) <= 10000),
     locale_override TEXT,
     text_revision INTEGER NOT NULL DEFAULT 1
   )`,
+
   `CREATE TABLE IF NOT EXISTS import_jobs (
     id TEXT PRIMARY KEY NOT NULL,
     book_id TEXT NOT NULL,

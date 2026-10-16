@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
 import { AuthError } from '../../lib/auth';
-import { isEmailValid, isPasswordValid } from '../../lib/password';
+import { validateEmail, validateName, validatePassword } from '../../lib/validators';
 import { Button } from '../ui/button';
 import { Input, Label } from '../ui/input';
 import { AuthLayout } from './AuthLayout';
@@ -24,16 +24,19 @@ export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => vo
     e.preventDefault();
     setError('');
     clearOAuthError();
-    if (name.trim().length < 2) {
-      setError('Escribe tu nombre (mínimo 2 letras).');
+    const nameErr = validateName(name);
+    if (nameErr) {
+      setError(nameErr);
       return;
     }
-    if (!isEmailValid(email)) {
-      setError('Escribe un correo electrónico válido.');
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setError(emailErr);
       return;
     }
-    if (!isPasswordValid(password)) {
-      setError('La contraseña debe tener mayúsculas, minúsculas, un número y un símbolo (mínimo 8 caracteres).');
+    const passErr = validatePassword(password);
+    if (passErr) {
+      setError(passErr);
       return;
     }
     if (confirm !== password) {
@@ -55,19 +58,20 @@ export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => vo
       <form onSubmit={submit} className="grid gap-4" noValidate>
         <div>
           <Label htmlFor="reg-name">Nombre</Label>
-          <Input id="reg-name" autoComplete="name" placeholder="Ej. María García" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input id="reg-name" autoComplete="name" placeholder="Ej. María García" maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
           <Label htmlFor="reg-email">Correo electrónico</Label>
-          <Input id="reg-email" type="email" autoComplete="email" placeholder="tucorreo@ejemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input id="reg-email" type="email" autoComplete="email" placeholder="tucorreo@ejemplo.com" maxLength={180} value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div>
           <Label htmlFor="reg-password">Contraseña</Label>
           <div className="relative">
             <Input
               id="reg-password" type={show ? 'text' : 'password'} autoComplete="new-password"
-              placeholder="Mínimo 8 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="pr-14"
+              placeholder="Mínimo 8 caracteres" maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} className="pr-14"
             />
+
             <button
               type="button" onClick={() => setShow((s) => !s)}
               className="absolute right-1 top-1/2 flex min-h-[48px] min-w-[48px] -translate-y-1/2 items-center justify-center rounded-lg text-ink-soft hover:bg-paper-deep"

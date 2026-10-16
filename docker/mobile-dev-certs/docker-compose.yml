@@ -1,0 +1,12 @@
+services:
+  mobile-dev-certs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: msm-mobile-dev-certs
+    volumes:
+      - ./certs:/output
+    environment:
+      - KEYSTORE_PASS=msm_dev_keystore_pass_2026
+      - KEY_ALIAS=myschoolmyparents
+      - VALIDITY_DAYS=3650

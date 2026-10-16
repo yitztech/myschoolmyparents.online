@@ -31,6 +31,8 @@ lerna-debug.log*
 # ——— Docker / datos locales ———
 pgdata/
 *.volume
+docker/mobile-dev-certs/certs/
+
 
 # ——— Sistema / editores ———
 .DS_Store
