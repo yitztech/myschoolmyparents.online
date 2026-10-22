@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import {
   DEFAULT_LOCALE,
-  detectBrowserLocale,
   isSupportedLocale,
   SUPPORTED_LOCALES,
   type LocaleMeta,
@@ -22,11 +21,15 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 function getInitialLocale(): SiteLocale {
   if (typeof window === 'undefined') return DEFAULT_LOCALE;
+  const pathFirstSegment = window.location.pathname.split('/').filter(Boolean)[0]?.toLowerCase();
+  if (pathFirstSegment && isSupportedLocale(pathFirstSegment)) {
+    return pathFirstSegment;
+  }
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved && isSupportedLocale(saved)) return saved;
   } catch {}
-  return detectBrowserLocale();
+  return DEFAULT_LOCALE;
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {

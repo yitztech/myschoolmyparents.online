@@ -79,6 +79,9 @@ export const LOCALES = [
   { value: 'en-GB', label: '🇬🇧 English (UK)' },
   { value: 'es-MX', label: '🇲🇽 Español (México)' },
   { value: 'es-ES', label: '🇪🇸 Español (España)' },
+  { value: 'pt-BR', label: '🇧🇷 Português (Brasil)' },
+  { value: 'de-DE', label: '🇩🇪 Deutsch' },
+  { value: 'fr-FR', label: '🇫🇷 Français' },
 ] as const;
 
 export const friendlyLocale = (locale: string) => LOCALES.find((l) => l.value === locale)?.label ?? locale;

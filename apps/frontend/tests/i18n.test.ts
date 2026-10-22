@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SUPPORTED_LOCALES, isSupportedLocale } from '../src/i18n/locales';
 import { TRANSLATIONS } from '../src/i18n/translations';
+import { lookupWord } from '../src/lib/dictionary';
+import { ocrLangForLocale } from '../src/lib/ocr';
 
 test('i18n: contiene los 5 idiomas requeridos', () => {
   const codes = SUPPORTED_LOCALES.map((l) => l.code);
@@ -41,4 +43,20 @@ test('i18n: valida correctamente los códigos de idioma soportados', () => {
   assert.equal(isSupportedLocale('fr'), true);
   assert.equal(isSupportedLocale('it'), false);
   assert.equal(isSupportedLocale(null), false);
+});
+
+test('dictionary: traduce palabras clave a los 5 idiomas soportados', () => {
+  assert.equal(lookupWord('house', { homeLocale: 'es-MX', learningLocale: 'en-US' }).translation, 'Casa');
+  assert.equal(lookupWord('house', { homeLocale: 'pt-BR', learningLocale: 'en-US' }).translation, 'Casa');
+  assert.equal(lookupWord('house', { homeLocale: 'de-DE', learningLocale: 'en-US' }).translation, 'Haus');
+  assert.equal(lookupWord('house', { homeLocale: 'fr-FR', learningLocale: 'en-US' }).translation, 'Maison');
+  assert.equal(lookupWord('Haus', { homeLocale: 'en-US', learningLocale: 'de-DE' }).translation, 'House');
+});
+
+test('ocrLangForLocale: mapea los 5 idiomas a Tesseract', () => {
+  assert.equal(ocrLangForLocale('es-MX'), 'spa');
+  assert.equal(ocrLangForLocale('en-US'), 'eng');
+  assert.equal(ocrLangForLocale('pt-BR'), 'por');
+  assert.equal(ocrLangForLocale('de-DE'), 'deu');
+  assert.equal(ocrLangForLocale('fr-FR'), 'fra');
 });

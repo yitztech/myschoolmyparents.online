@@ -3,6 +3,7 @@ import { db, nextOrderKey } from '../lib/db';
 import { processImage } from '../lib/images';
 import { kickQueue } from '../lib/queue';
 import { uid, splitParagraphs } from '../lib/types';
+import { useI18n } from '../i18n/I18nContext';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Label } from './ui/input';
@@ -22,6 +23,7 @@ interface Staged {
 }
 
 export function CaptureDialog({ bookId, onDone }: Props) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [staged, setStaged] = useState<Staged[]>([]);
   const [current, setCurrent] = useState(0);
@@ -109,22 +111,22 @@ export function CaptureDialog({ bookId, onDone }: Props) {
   }), [rotation, crop]);
 
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Añadir páginas">
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" aria-label="Tomar foto"
+    <div className="flex flex-wrap gap-2" role="group" aria-label={t.capture.addPagesGroup}>
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" aria-label={t.capture.takePhoto}
         onChange={(e) => e.target.files && addFiles(e.target.files)} />
-      <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" aria-label="Elegir fotos"
+      <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" aria-label={t.capture.choosePhotos}
         onChange={(e) => e.target.files && addFiles(e.target.files)} />
-      <Button variant="outline" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /> Tomar foto</Button>
-      <Button variant="outline" onClick={() => fileRef.current?.click()}><Images className="h-5 w-5" /> Elegir fotos</Button>
-      <Button variant="ghost" onClick={useSample}><Sparkles className="h-5 w-5" /> Usar ejemplo</Button>
+      <Button variant="outline" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /> {t.capture.takePhoto}</Button>
+      <Button variant="outline" onClick={() => fileRef.current?.click()}><Images className="h-5 w-5" /> {t.capture.choosePhotos}</Button>
+      <Button variant="ghost" onClick={useSample}><Sparkles className="h-5 w-5" /> {t.capture.useSample}</Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Ajustar antes de importar ({staged.length} fotos)</DialogTitle>
+            <DialogTitle>{t.capture.adjustTitle} ({staged.length})</DialogTitle>
           </DialogHeader>
           <div aria-live="polite" className="text-sm font-medium text-ink-soft">
-            Recorte del centro (65–100%) y giro a los lados. El orden de las fotos es el orden del libro.
+            {t.capture.adjustHelp}
           </div>
           {progress && <p role="status" className="rounded-xl border-2 border-ink bg-sun/60 p-3 font-bold">{progress}</p>}
           {errors.length > 0 && (
@@ -150,23 +152,23 @@ export function CaptureDialog({ bookId, onDone }: Props) {
                   ))}
                 </div>
                 <div>
-                  <Label>Recorte centrado: {Math.round(crop * 100)}%</Label>
+                  <Label>{t.capture.cropLabel}: {Math.round(crop * 100)}%</Label>
                   <Slider min={0.65} max={1} step={0.01} value={[crop]} onValueChange={(v) => setCrop(v[0] as number)} />
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setRotation(((rotation + 270) % 360) as 0 | 90 | 180 | 270)} aria-label="Rotar -90 grados">
-                    <RotateCcw className="h-5 w-5" /> −90°
+                    <RotateCcw className="h-5 w-5" /> {t.capture.rotateLeft}
                   </Button>
                   <Button variant="outline" onClick={() => setRotation(((rotation + 90) % 360) as 0 | 90 | 180 | 270)} aria-label="Rotar +90 grados">
-                    <RotateCw className="h-5 w-5" /> +90°
+                    <RotateCw className="h-5 w-5" /> {t.capture.rotateRight}
                   </Button>
                 </div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setStaged([]); setOpen(false); }}>Cancelar</Button>
-            <Button onClick={importAll} disabled={staged.length === 0}>Importar {staged.length} foto(s)</Button>
+            <Button variant="outline" onClick={() => { setStaged([]); setOpen(false); }}>{t.capture.cancel}</Button>
+            <Button onClick={importAll} disabled={staged.length === 0}>{t.capture.importBtn} ({staged.length})</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

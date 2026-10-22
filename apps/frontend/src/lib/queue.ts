@@ -1,4 +1,5 @@
-import { db, touchBook } from './db';
+import { db, pruneOrphanBlobs, touchBook } from './db';
+import { compactApprovedPageBlobs } from './images';
 import { recognizeImage, ocrLangForLocale } from './ocr';
 import { splitParagraphs, uid } from './types';
 
@@ -108,6 +109,8 @@ export async function approveDraft(draftId: string, editedParagraphs?: string[])
     await db.drafts.delete(draft.id);
     await db.books.update(draft.bookId, { contentRevision: rev, updatedAt: Date.now() });
   });
+  await compactApprovedPageBlobs(draft.bookId).catch(() => {});
+  await pruneOrphanBlobs().catch(() => {});
   kickQueue();
 }
 

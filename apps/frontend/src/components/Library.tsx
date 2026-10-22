@@ -1,9 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { BookOpen, ChevronRight, Download, MoreVertical, Plus, Trash2, Edit3, Upload } from 'lucide-react';
+import { BookOpen, ChevronRight, Cloud, Download, MoreVertical, Plus, Trash2, Edit3, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { db, deleteBookCascade } from '../lib/db';
 import { HOME_LOCALES, LEARNING_LOCALES, uid, type Book } from '../lib/types';
 import { downloadLibraryBackup, restoreLibraryBackup } from '../lib/backup';
+import { synchronizeLibraryWithCloud } from '../lib/sync';
 import { useI18n } from '../i18n/I18nContext';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -34,6 +35,8 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameTitle, setRenameTitle] = useState('');
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{ text: string; isError?: boolean } | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const backupInputRef = useRef<HTMLInputElement>(null);
 
   async function createBook() {
@@ -62,9 +65,29 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
     try {
       const text = await file.text();
       const res = await restoreLibraryBackup(text);
-      alert(`Restauración completada: ${res.booksCount} libro(s) recuperados.`);
-    } catch (err: any) {
-      alert(`Error al restaurar: ${err.message || 'archivo inválido'}`);
+      setStatusMessage({ text: `Restauración completada: ${res.booksCount} libro(s) recuperados.` });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'archivo inválido';
+      setStatusMessage({ text: `Error al restaurar: ${message}`, isError: true });
+    } finally {
+      e.target.value = '';
+    }
+  }
+
+  async function handleSyncCloud() {
+    if (syncing) return;
+    setSyncing(true);
+    setStatusMessage(null);
+    try {
+      const res = await synchronizeLibraryWithCloud();
+      setStatusMessage({
+        text: `${t.library.syncCloud}: ${res.pushedCount} enviado(s), ${res.pulledCount} descargado(s).`,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'error de red';
+      setStatusMessage({ text: `Error al sincronizar: ${message}`, isError: true });
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -95,8 +118,17 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => downloadLibraryBackup()}
-            title="Descargar copia de seguridad"
+            onClick={() => void handleSyncCloud()}
+            disabled={syncing}
+            title={t.library.syncCloud}
+          >
+            <Cloud className="h-4 w-4 mr-1" aria-hidden /> {t.library.syncCloud}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void downloadLibraryBackup()}
+            title={t.library.backupOptions}
           >
             <Download className="h-4 w-4 mr-1" aria-hidden /> Backup
           </Button>
@@ -104,7 +136,7 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
             variant="outline"
             size="sm"
             onClick={() => backupInputRef.current?.click()}
-            title="Restaurar copia de seguridad"
+            title={t.library.backupOptions}
           >
             <Upload className="h-4 w-4 mr-1" aria-hidden /> Restaurar
           </Button>
@@ -173,6 +205,20 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
           </Dialog>
         </div>
       </header>
+
+      {statusMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`mb-4 rounded-xl border-2 px-4 py-2.5 text-sm font-bold ${
+            statusMessage.isError
+              ? 'border-coral bg-coral/15 text-ink'
+              : 'border-leaf bg-leaf/20 text-ink'
+          }`}
+        >
+          {statusMessage.text}
+        </div>
+      )}
 
       {books === undefined && <p role="status">{t.library.loading}</p>}
 

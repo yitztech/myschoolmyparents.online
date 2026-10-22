@@ -3,6 +3,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
 import { AuthError } from '../../lib/auth';
 import { isEmailValid } from '../../lib/password';
+import { useI18n } from '../../i18n/I18nContext';
 import { Button } from '../ui/button';
 import { Input, Label } from '../ui/input';
 import { AuthLayout } from './AuthLayout';
@@ -10,6 +11,7 @@ import { GoogleButton } from './GoogleButton';
 import type { AuthView } from './AuthNavigator';
 
 export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void }) {
+  const { t } = useI18n();
   const { login, oauthError, clearOAuthError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,17 +45,17 @@ export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void 
   const errorMessage = error || oauthError;
 
   return (
-    <AuthLayout title="Iniciar sesión" subtitle="Bienvenido de nuevo. Tus libros te están esperando.">
+    <AuthLayout title={t.auth.loginTitle} subtitle={t.auth.loginSubtitle}>
       <form onSubmit={submit} className="grid gap-4" noValidate>
         <div>
-          <Label htmlFor="login-email">Correo electrónico</Label>
+          <Label htmlFor="login-email">{t.auth.email}</Label>
           <Input
-            id="login-email" type="email" autoComplete="email" placeholder="tucorreo@ejemplo.com"
+            id="login-email" type="email" autoComplete="email" placeholder={t.auth.emailPlaceholder}
             value={email} onChange={(e) => setEmail(e.target.value)}
           />
         </div>
         <div>
-          <Label htmlFor="login-password">Contraseña</Label>
+          <Label htmlFor="login-password">{t.auth.password}</Label>
           <div className="relative">
             <Input
               id="login-password" type={show ? 'text' : 'password'} autoComplete="current-password"
@@ -63,29 +65,29 @@ export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void 
             <button
               type="button" onClick={() => setShow((s) => !s)}
               className="absolute right-1 top-1/2 flex min-h-[48px] min-w-[48px] -translate-y-1/2 items-center justify-center rounded-lg text-ink-soft hover:bg-paper-deep"
-              aria-label={show ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              aria-label={show ? t.auth.hidePassword : t.auth.showPassword}
             >
               {show ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
         </div>
         {errorMessage && <p role="alert" className="rounded-xl border-2 border-coral-deep bg-[#FFE9E0] p-3 text-sm font-bold text-coral-deep">{errorMessage}</p>}
-        <Button type="submit" variant="coral" className="w-full" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</Button>
+        <Button type="submit" variant="coral" className="w-full" disabled={busy}>{busy ? t.auth.loginSubmitting : t.auth.loginSubmit}</Button>
       </form>
 
       <GoogleButton mode="login" />
 
       <nav className="mt-6 grid gap-2 text-center text-sm" aria-label="Opciones de cuenta">
         <p className="font-medium text-ink-soft">
-          ¿No tienes cuenta?{' '}
+          {t.auth.noAccountPrompt}{' '}
           <button onClick={() => onNavigate('register')} className="min-h-[48px] rounded font-black text-coral-deep underline decoration-sun decoration-[3px] underline-offset-4 hover:bg-sun/40">
-            Regístrate
+            {t.auth.registerLink}
           </button>
         </p>
         <p className="font-medium text-ink-soft">
-          ¿Olvidaste tu contraseña?{' '}
+          {t.auth.forgotPassword}{' '}
           <button onClick={() => onNavigate('recover')} className="min-h-[48px] rounded font-black text-coral-deep underline decoration-sun decoration-[3px] underline-offset-4 hover:bg-sun/40">
-            Recupérala aquí
+            {t.auth.recoverLink}
           </button>
         </p>
       </nav>

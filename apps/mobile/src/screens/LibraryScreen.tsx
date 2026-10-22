@@ -3,11 +3,13 @@ import { FlatList, Image, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AboutDialog } from '../components/AboutDialog';
+import { LanguageSwitcherModal } from '../components/LanguageSwitcherModal';
 import { ActionMenu, AppText, Badge, Button, ConfirmDialog, Dialog, Icon, IconButton, OptionPicker, TextField } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useApp } from '../context/AppContext';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import type { Book } from '../db/schema';
+import { MOBILE_TRANSLATIONS, type MobileLocale } from '../i18n';
 import { displayVersion } from '../lib/appVersion';
 import { importBookFromFile, exportBookToFile, NO_FILE } from '../services/bookFiles';
 import { colors, bookTheme, friendlyLocale, LOCALES, radius } from '../theme';
@@ -17,6 +19,9 @@ const CREATE_LOCALES = [
   { value: 'en-US', label: 'Inglés (US)' },
   { value: 'en-GB', label: 'Inglés (UK)' },
   { value: 'es-MX', label: 'Español' },
+  { value: 'pt-BR', label: 'Português' },
+  { value: 'de-DE', label: 'Deutsch' },
+  { value: 'fr-FR', label: 'Français' },
 ] as const;
 
 const greeting = () => {
@@ -33,12 +38,15 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
 
   const [syncing, setSyncing] = useState(false);
   const [about, setAbout] = useState(false);
+  const [langModalOpen, setLangModalOpen] = useState(false);
+  const [uiLocale, setUiLocale] = useState<MobileLocale>('es');
   const [createOpen, setCreateOpen] = useState(false);
   const [cloudOpen, setCloudOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Book | null>(null);
   const [editing, setEditing] = useState<Book | null>(null);
   const [exported, setExported] = useState<{ book: Book; fileName: string; filePath?: string; paragraphs: number; pages: number } | null>(null);
   const isGuest = user?.isGuest === true;
+  const t = MOBILE_TRANSLATIONS[uiLocale];
 
   const open = useCallback((book: Book) => navigation.navigate('Book', { bookId: book.id }), [navigation]);
 
@@ -92,10 +100,11 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
       <Image source={require('../../assets/branding/my_school_my_parents_logo.png')} style={{ width: 36, height: 36, borderRadius: 9 }} accessibilityLabel="Logotipo" />
       <View style={{ flex: 1 }}>
         <AppText accessibilityRole="header" style={{ fontWeight: '800', fontSize: 18 }}>
-          Mis libros
+          {t.libraryTitle}
         </AppText>
         <AppText style={{ fontSize: 11, fontWeight: '500', color: colors.muted }}>{displayVersion()}</AppText>
       </View>
+      <IconButton icon="translate" label="Cambiar idioma" onPress={() => setLangModalOpen(true)} />
       <IconButton icon="info-outline" label="Información de la app" onPress={() => setAbout(true)} />
       <Pressable
         accessibilityRole="button"
@@ -269,6 +278,12 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
         </AppText>
       </Dialog>
       <AboutDialog visible={about} onClose={() => setAbout(false)} syncStatus={isGuest ? 'Modo Local (sin conexión)' : 'Sincronizado con la nube'} />
+      <LanguageSwitcherModal
+        visible={langModalOpen}
+        currentLocale={uiLocale}
+        onSelect={setUiLocale}
+        onClose={() => setLangModalOpen(false)}
+      />
       <Dialog
         visible={exported !== null}
         title="Libro exportado"
@@ -339,7 +354,7 @@ function EditLanguageDialog({ book, onClose, onSave }: { book: Book; onClose: ()
       <View style={{ gap: 14, paddingVertical: 4 }}>
         <AppText style={{ color: colors.muted }}>Ajusta los idiomas usados para la voz en voz alta y las ayudas de vocabulario.</AppText>
         <OptionPicker label="Idioma del libro (para voz y lectura)" value={learning} options={LOCALES} onChange={setLearning} />
-        <OptionPicker label="Idioma nativo de la familia" value={home} options={LOCALES.filter((l) => ['es-MX', 'es-ES', 'en-US'].includes(l.value))} onChange={setHome} />
+        <OptionPicker label="Idioma nativo de la familia" value={home} options={LOCALES.filter((l) => ['es-MX', 'es-ES', 'en-US', 'pt-BR', 'de-DE', 'fr-FR'].includes(l.value))} onChange={setHome} />
       </View>
     </Dialog>
   );

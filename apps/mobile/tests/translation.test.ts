@@ -40,8 +40,11 @@ test('traducción sin conexión EN→ES, con mayúscula y flexiones', async () =
   assert.equal(await translateWord('  ...  ', { fromLocale: 'en', toLocale: 'es' }), null);
 });
 
-test('traducción sin conexión ES→EN', async () => {
+test('traducción sin conexión ES→EN y 5 idiomas (pt, de, fr)', async () => {
   assert.equal(await translateWord('árbol', { fromLocale: 'es', toLocale: 'en' }), 'tree');
+  assert.equal(await translateWord('house', { fromLocale: 'en', toLocale: 'de' }), 'Haus');
+  assert.equal(await translateWord('house', { fromLocale: 'en', toLocale: 'fr' }), 'maison');
+  assert.equal(await translateWord('dog', { fromLocale: 'en', toLocale: 'pt' }), 'cachorro');
 });
 
 test('diccionario: normalización', () => {

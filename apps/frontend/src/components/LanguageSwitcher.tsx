@@ -21,11 +21,26 @@ export function LanguageSwitcher() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  // Cerrar con Escape
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Cerrar con Escape y navegar con flechas arriba/abajo
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape' && isOpen) {
+      if (!isOpen) return;
+      if (e.key === 'Escape') {
         setIsOpen(false);
+        return;
+      }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const items = itemRefs.current.filter((el): el is HTMLButtonElement => el !== null);
+        if (items.length === 0) return;
+        const currentIndex = items.findIndex((el) => el === document.activeElement);
+        const nextIndex =
+          e.key === 'ArrowDown'
+            ? (currentIndex + 1) % items.length
+            : (currentIndex - 1 + items.length) % items.length;
+        items[nextIndex]?.focus();
       }
     }
     window.addEventListener('keydown', handleKeyDown);
@@ -68,11 +83,14 @@ export function LanguageSwitcher() {
 
           {/* Opciones con banderas, texto y checkmark */}
           <div className="divide-y divide-slate-100 py-1" role="none">
-            {SUPPORTED_LOCALES.map((item) => {
+            {SUPPORTED_LOCALES.map((item, idx) => {
               const isSelected = item.code === locale;
               return (
                 <button
                   key={item.code}
+                  ref={(el) => {
+                    itemRefs.current[idx] = el;
+                  }}
                   role="menuitem"
                   type="button"
                   onClick={() => handleSelect(item.code)}

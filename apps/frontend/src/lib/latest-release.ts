@@ -51,27 +51,23 @@ export function useLatestRelease(): ReleaseInfo {
 
     async function fetchRelease() {
       try {
-        // Consultamos el manifest del último release si está disponible
-        const res = await fetch(
-          'https://api.github.com/repos/yitztech/myschoolmyparents.online/releases/latest',
-          { headers: { Accept: 'application/vnd.github.v3+json' } }
-        );
+        // Consulta el endpoint del mismo origen (/api/releases/latest) para mantener connect-src 'self' intacto
+        const res = await fetch('/api/releases/latest', {
+          headers: { Accept: 'application/json' },
+        });
         if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled || !data || !data.tag_name) return;
-
-        const tag = data.tag_name as string;
-        const version = tag.replace(/^v/, '');
-        const androidAsset = data.assets?.find((a: any) => a.name?.endsWith('.apk'));
-        const iosAsset = data.assets?.find((a: any) => a.name?.endsWith('.ipa'));
+        const data = (await res.json()) as Partial<ReleaseInfo>;
+        if (cancelled || !data || !data.version) return;
 
         const latestInfo: ReleaseInfo = {
-          version,
-          build: FALLBACK_RELEASE.build,
-          tag,
-          publishedAt: data.published_at || new Date().toISOString(),
-          androidUrl: androidAsset?.browser_download_url || '/descargas/android',
-          iosUrl: iosAsset?.browser_download_url || '/descargas/ios',
+          version: data.version,
+          build: typeof data.build === 'number' ? data.build : FALLBACK_RELEASE.build,
+          tag: data.tag || `v${data.version}`,
+          publishedAt: data.publishedAt || new Date().toISOString(),
+          androidUrl: data.androidUrl || '/descargas/android',
+          iosUrl: data.iosUrl || '/descargas/ios',
+          ...(data.androidSha256 ? { androidSha256: data.androidSha256 } : {}),
+          ...(data.iosSha256 ? { iosSha256: data.iosSha256 } : {}),
         };
 
         if (!cancelled) {
@@ -88,7 +84,7 @@ export function useLatestRelease(): ReleaseInfo {
       }
     }
 
-    fetchRelease();
+    void fetchRelease();
     return () => {
       cancelled = true;
     };

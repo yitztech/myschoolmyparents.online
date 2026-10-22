@@ -113,13 +113,50 @@ export function normalizeWord(raw: string): string {
   return raw.trim().toLowerCase().replace(CLEAN_WORD_REGEX, '');
 }
 
+const MULTILINGUAL_GLOSSARY: Record<string, Record<'es' | 'en' | 'pt' | 'de' | 'fr', string>> = {
+  cat: { es: 'gato', en: 'cat', pt: 'gato', de: 'Katze', fr: 'chat' },
+  dog: { es: 'perro', en: 'dog', pt: 'cachorro', de: 'Hund', fr: 'chien' },
+  bird: { es: 'pájaro', en: 'bird', pt: 'pássaro', de: 'Vogel', fr: 'oiseau' },
+  fish: { es: 'pez', en: 'fish', pt: 'peixe', de: 'Fisch', fr: 'poisson' },
+  tree: { es: 'árbol', en: 'tree', pt: 'árvore', de: 'Baum', fr: 'arbre' },
+  sun: { es: 'sol', en: 'sun', pt: 'sol', de: 'Sonne', fr: 'soleil' },
+  moon: { es: 'luna', en: 'moon', pt: 'lua', de: 'Mond', fr: 'lune' },
+  house: { es: 'casa', en: 'house', pt: 'casa', de: 'Haus', fr: 'maison' },
+  school: { es: 'escuela', en: 'school', pt: 'escola', de: 'Schule', fr: 'école' },
+  family: { es: 'familia', en: 'family', pt: 'família', de: 'Familie', fr: 'famille' },
+  mother: { es: 'mamá / madre', en: 'mother', pt: 'mãe', de: 'Mutter', fr: 'mère' },
+  father: { es: 'papá / padre', en: 'father', pt: 'pai', de: 'Vater', fr: 'père' },
+  friend: { es: 'amigo / amiga', en: 'friend', pt: 'amigo', de: 'Freund', fr: 'ami' },
+  book: { es: 'libro', en: 'book', pt: 'livro', de: 'Buch', fr: 'livre' },
+  page: { es: 'página', en: 'page', pt: 'página', de: 'Seite', fr: 'page' },
+  story: { es: 'cuento / historia', en: 'story', pt: 'história', de: 'Geschichte', fr: 'histoire' },
+  read: { es: 'leer', en: 'read', pt: 'ler', de: 'lesen', fr: 'lire' },
+  play: { es: 'jugar', en: 'play', pt: 'brincar', de: 'spielen', fr: 'jouer' },
+};
+
+function findMultilingualTranslation(norm: string, targetLangCode: string): string | undefined {
+  const shortTarget = (targetLangCode.slice(0, 2).toLowerCase() || 'es') as 'es' | 'en' | 'pt' | 'de' | 'fr';
+  if (MULTILINGUAL_GLOSSARY[norm]?.[shortTarget]) {
+    return MULTILINGUAL_GLOSSARY[norm]![shortTarget];
+  }
+  for (const entry of Object.values(MULTILINGUAL_GLOSSARY)) {
+    const matchesAny = Object.values(entry).some(
+      (v) => v.toLowerCase().split('/')[0]?.trim() === norm
+    );
+    if (matchesAny && entry[shortTarget]) {
+      return entry[shortTarget];
+    }
+  }
+  return COMMON_TRANSLATIONS[norm];
+}
+
 export function lookupWord(
   rawWord: string,
   options: { homeLocale: string; learningLocale: string }
 ): WordInfo {
   const norm = normalizeWord(rawWord);
   const displayWord = norm ? norm.charAt(0).toUpperCase() + norm.slice(1) : rawWord.trim();
-  const translation = COMMON_TRANSLATIONS[norm];
+  const translation = findMultilingualTranslation(norm, options.homeLocale);
   const meaning =
     COMMON_DEFINITIONS[norm] ??
     `Palabra del texto («${rawWord.trim()}») en el idioma de lectura.`;

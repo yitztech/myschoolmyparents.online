@@ -79,9 +79,26 @@ function resolveSpanishInflection(word: string): string | null {
   return null;
 }
 
+const MULTILINGUAL_BASIC: Record<string, Record<string, string>> = {
+  cat: { es: 'gato', en: 'cat', pt: 'gato', de: 'Katze', fr: 'chat' },
+  dog: { es: 'perro', en: 'dog', pt: 'cachorro', de: 'Hund', fr: 'chien' },
+  bird: { es: 'pájaro', en: 'bird', pt: 'pássaro', de: 'Vogel', fr: 'oiseau' },
+  house: { es: 'casa', en: 'house', pt: 'casa', de: 'Haus', fr: 'maison' },
+  school: { es: 'escuela', en: 'school', pt: 'escola', de: 'Schule', fr: 'école' },
+  family: { es: 'familia', en: 'family', pt: 'família', de: 'Familie', fr: 'famille' },
+  book: { es: 'libro', en: 'book', pt: 'livro', de: 'Buch', fr: 'livre' },
+  sun: { es: 'sol', en: 'sun', pt: 'sol', de: 'Sonne', fr: 'soleil' },
+  tree: { es: 'árbol', en: 'tree', pt: 'árvore', de: 'Baum', fr: 'arbre' },
+};
+
 export function lookupLocalDictionary(word: string, from: string, to: string): string | null {
   if (from === 'en' && to === 'es') return (has(EN_TO_ES, word) ? EN_TO_ES[word] : null) ?? resolveEnglishInflection(word);
   if (from === 'es' && to === 'en') return (has(ES_TO_EN, word) ? ES_TO_EN[word] : null) ?? resolveSpanishInflection(word);
+  for (const row of Object.values(MULTILINGUAL_BASIC)) {
+    if (row[from]?.toLowerCase() === word && row[to]) {
+      return row[to]!;
+    }
+  }
   return null;
 }
 

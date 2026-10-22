@@ -46,7 +46,11 @@ export async function recognizeImage(blob: Blob, lang = 'eng'): Promise<OcrResul
 }
 
 export function ocrLangForLocale(locale: string): string {
-  if (locale.startsWith('en')) return 'eng';
-  if (locale.startsWith('es')) return 'spa';
+  const code = locale.trim().toLowerCase();
+  if (code.startsWith('en')) return 'eng';
+  if (code.startsWith('es')) return 'spa';
+  if (code.startsWith('pt')) return 'por';
+  if (code.startsWith('de')) return 'deu';
+  if (code.startsWith('fr')) return 'fra';
   return 'eng+spa';
 }

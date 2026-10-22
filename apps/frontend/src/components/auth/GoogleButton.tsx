@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../../lib/auth-context';
 import { getGoogleOAuthUrl, isMockMode, AuthError } from '../../lib/auth';
 import { isEmailValid } from '../../lib/password';
+import { useI18n } from '../../i18n/I18nContext';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input, Label } from '../ui/input';
@@ -26,6 +27,7 @@ function GoogleIcon() {
  * no se pinta.
  */
 export function GoogleButton({ mode }: { mode: 'register' | 'login' }) {
+  const { t } = useI18n();
   const { loginGoogle, googleEnabled } = useAuth();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -71,9 +73,9 @@ export function GoogleButton({ mode }: { mode: 'register' | 'login' }) {
       <div className="my-4 flex items-center gap-3 text-xs font-bold text-ink-soft" aria-hidden>
         <span className="h-0.5 flex-1 rounded bg-ink/15" /><span>o</span><span className="h-0.5 flex-1 rounded bg-ink/15" />
       </div>
-      <Button type="button" variant="outline" className="w-full" onClick={start} aria-label={mode === 'register' ? 'Registrarse con Google' : 'Continuar con Google'}>
+      <Button type="button" variant="outline" className="w-full" onClick={start} aria-label={mode === 'register' ? t.auth.registerWithGoogle : t.auth.continueWithGoogle}>
         <GoogleIcon />
-        {mode === 'register' ? 'Registrarse con Google' : 'Continuar con Google'}
+        {mode === 'register' ? t.auth.registerWithGoogle : t.auth.continueWithGoogle}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
