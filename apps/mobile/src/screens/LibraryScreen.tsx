@@ -9,7 +9,7 @@ import { useToast } from '../components/Toast';
 import { useApp } from '../context/AppContext';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import type { Book } from '../db/schema';
-import { MOBILE_TRANSLATIONS, type MobileLocale } from '../i18n';
+import { MOBILE_STRINGS, type MobileLocale } from '../i18n';
 import { displayVersion } from '../lib/appVersion';
 import { importBookFromFile, exportBookToFile, NO_FILE } from '../services/bookFiles';
 import { colors, bookTheme, friendlyLocale, LOCALES, radius } from '../theme';
@@ -46,7 +46,7 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
   const [editing, setEditing] = useState<Book | null>(null);
   const [exported, setExported] = useState<{ book: Book; fileName: string; filePath?: string; paragraphs: number; pages: number } | null>(null);
   const isGuest = user?.isGuest === true;
-  const t = MOBILE_TRANSLATIONS[uiLocale];
+  const t = MOBILE_STRINGS[uiLocale];
 
   const open = useCallback((book: Book) => navigation.navigate('Book', { bookId: book.id }), [navigation]);
 
@@ -100,7 +100,7 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
       <Image source={require('../../assets/branding/my_school_my_parents_logo.png')} style={{ width: 36, height: 36, borderRadius: 9 }} accessibilityLabel="Logotipo" />
       <View style={{ flex: 1 }}>
         <AppText accessibilityRole="header" style={{ fontWeight: '800', fontSize: 18 }}>
-          {t.libraryTitle}
+          {t.booksTitle}
         </AppText>
         <AppText style={{ fontSize: 11, fontWeight: '500', color: colors.muted }}>{displayVersion()}</AppText>
       </View>
