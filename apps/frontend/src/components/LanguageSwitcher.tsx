@@ -38,7 +38,7 @@ export function LanguageSwitcher() {
   };
 
   return (
-    <div className="relative inline-block text-left" ref={containerRef}>
+    <div className="relative inline-block text-left z-50" ref={containerRef}>
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
@@ -57,7 +57,7 @@ export function LanguageSwitcher() {
           role="menu"
           aria-orientation="vertical"
           aria-labelledby="language-menu"
-          className="absolute right-0 z-50 mt-2 w-72 origin-top-right rounded-2xl border border-slate-200/90 bg-white shadow-xl ring-1 ring-black/5 focus:outline-none overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+          className="absolute right-0 z-[100] mt-2 w-72 origin-top-right rounded-2xl border-2 border-ink bg-white shadow-[6px_6px_0_#262134] focus:outline-none overflow-hidden animate-in fade-in zoom-in-95 duration-100"
         >
           {/* Cabecera idéntica a la imagen: VER ESTE SITIO EN ESPAÑOL */}
           <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-3 text-left">

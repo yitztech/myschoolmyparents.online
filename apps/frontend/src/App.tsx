@@ -80,7 +80,7 @@ function AppContent() {
       >
         {t.nav.skipToContent}
       </a>
-      <nav className="border-b-2 border-ink bg-paper/95 backdrop-blur" aria-label="Principal">
+      <nav className="relative z-50 border-b-2 border-ink bg-paper/95 backdrop-blur" aria-label="Principal">
         <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-4 py-3">
           <a href="/" className="flex items-center gap-3 rounded-xl" aria-label="MySchoolMyParents Online, inicio">
             <div className="sticker flex h-10 w-10 -rotate-3 items-center justify-center rounded-xl bg-coral font-display text-xl font-black text-white" aria-hidden>
