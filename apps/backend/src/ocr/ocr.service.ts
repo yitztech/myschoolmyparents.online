@@ -16,9 +16,9 @@ import { PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 import { OcrRequest } from './ocr-request.entity';
 
-/** Modelos horneados en la imagen (ver backend/Dockerfile). */
+/** Modelos horneados en la imagen (ver backend/Dockerfile) o descargados a demanda. */
 const BAKED_TESSDATA = '/app/tessdata';
-const LANGS = ['eng', 'spa'];
+const LANGS = ['eng', 'spa', 'por', 'deu', 'fra'];
 
 /**
  * Tope de tamaño en píxeles, comprobado leyendo solo la cabecera. Los 15 MB
@@ -92,13 +92,20 @@ export class OcrService implements OnModuleInit {
   }
 
   normalizeLang(langReq: string): string {
-    if (/spa/.test(langReq) && /eng/.test(langReq)) return 'eng+spa';
-    if (/spa/.test(langReq)) return 'spa';
+    const l = (langReq || '').toLowerCase();
+    if ((/spa|es/.test(l)) && (/eng|en/.test(l))) return 'eng+spa';
+    if (/por|pt/.test(l)) return 'por';
+    if (/deu|de/.test(l)) return 'deu';
+    if (/fra|fr/.test(l)) return 'fra';
+    if (/spa|es/.test(l)) return 'spa';
     return 'eng';
   }
 
   /** Rechaza lo que no sea una imagen de verdad o sea demasiado grande, sin decodificarla. */
   assertImageSize(image: Buffer) {
+    if (!image || image.length < 12) {
+      throw new BadRequestException('El fichero es demasiado pequeño o está corrupto.');
+    }
     let info: { type?: string; width?: number; height?: number };
     try {
       info = imageSize(image);

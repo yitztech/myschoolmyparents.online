@@ -9,6 +9,7 @@ import { ApiExceptionFilter } from './common/filters/api-exception.filter';
 import configuration from './config/configuration';
 import { HealthModule } from './health/health.module';
 import { OcrModule } from './ocr/ocr.module';
+import { SyncModule } from './sync/sync.module';
 import { UsersModule } from './users/users.module';
 
 /** Sin espacios ni saltos de línea y acotado: evita inyección en los logs. */
@@ -67,6 +68,7 @@ const SAFE_REQUEST_ID = /^[A-Za-z0-9._-]{1,64}$/;
     AuthModule,
     OcrModule,
     HealthModule,
+    SyncModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
 })

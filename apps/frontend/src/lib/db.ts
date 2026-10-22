@@ -111,3 +111,29 @@ export async function blobToUrl(id?: string): Promise<string | undefined> {
   if (!rec) return undefined;
   return URL.createObjectURL(rec.blob);
 }
+
+/**
+ * Limpieza de blobs huérfanos que ya no pertenezcan a ninguna página ni trabajo.
+ */
+export async function pruneOrphanBlobs(): Promise<number> {
+  const pages = await db.pages.toArray();
+  const jobs = await db.jobs.toArray();
+  const activeBlobIds = new Set<string>();
+  pages.forEach((p) => {
+    if (p.originalBlobId) activeBlobIds.add(p.originalBlobId);
+    if (p.derivedBlobId) activeBlobIds.add(p.derivedBlobId);
+  });
+  jobs.forEach((j) => {
+    if (j.imageBlobId) activeBlobIds.add(j.imageBlobId);
+  });
+
+  const allBlobs = await db.blobs.toArray();
+  let deletedCount = 0;
+  for (const b of allBlobs) {
+    if (!activeBlobIds.has(b.id)) {
+      await db.blobs.delete(b.id);
+      deletedCount++;
+    }
+  }
+  return deletedCount;
+}

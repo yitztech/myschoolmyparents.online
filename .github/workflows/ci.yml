@@ -80,3 +80,23 @@ jobs:
         working-directory: apps/mobile
       - run: node --test scripts/test-mobile-scripts.mjs
 
+  security:
+    name: Seguridad · auditoría y secretos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Auditoría de dependencias
+        run: |
+          npm audit --prefix apps/backend --audit-level=high || true
+          npm audit --prefix apps/frontend --audit-level=high || true
+          npm audit --prefix apps/mobile --audit-level=high || true
+

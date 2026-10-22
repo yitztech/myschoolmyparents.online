@@ -73,12 +73,19 @@ export const LEARNING_LOCALES = [
   { value: 'en-GB', label: 'English (UK)' },
   { value: 'es-MX', label: 'Español (MX)' },
   { value: 'es-ES', label: 'Español (ES)' },
+  { value: 'pt-BR', label: 'Português (BR)' },
+  { value: 'de-DE', label: 'Deutsch (DE)' },
+  { value: 'fr-FR', label: 'Français (FR)' },
 ];
 
 export const HOME_LOCALES = [
   { value: 'es-MX', label: 'Español (MX)' },
   { value: 'es-ES', label: 'Español (ES)' },
   { value: 'en-US', label: 'English (US)' },
+  { value: 'en-GB', label: 'English (UK)' },
+  { value: 'pt-BR', label: 'Português (BR)' },
+  { value: 'de-DE', label: 'Deutsch (DE)' },
+  { value: 'fr-FR', label: 'Français (FR)' },
 ];
 
 export function uid(prefix = 'id'): string {

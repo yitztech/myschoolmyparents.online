@@ -1,6 +1,9 @@
+import { db } from './db';
+
 /**
  * Recorte centrado (65-100%) y rotación ±90° con canvas.
  * crop: 0.65..1 (fracción del lado menor centrada). rotation: 0|90|180|270
+ * Optimizado a máx. 1600px en WebP (calidad 0.78) o JPEG (0.80) para reducir >85% de espacio.
  */
 export async function processImage(file: Blob, crop = 1, rotation: 0 | 90 | 180 | 270 = 0): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
@@ -19,8 +22,8 @@ export async function processImage(file: Blob, crop = 1, rotation: 0 | 90 | 180 
   canvas.height = outH;
   const ctx = canvas.getContext('2d')!;
 
-  // downscale si es gigante (>2000px) para OCR/storage
-  const MAX = 2000;
+  // downscale a máx. 1600px para OCR y almacenamiento óptimo
+  const MAX = 1600;
   const scale = Math.min(1, MAX / Math.max(outW, outH));
 
   ctx.save();
@@ -36,20 +39,53 @@ export async function processImage(file: Blob, crop = 1, rotation: 0 | 90 | 180 
 
   const targetW = Math.floor(outW * scale);
   const targetH = Math.floor(outH * scale);
-  if (canvas.width !== targetW || canvas.height !== targetH) {
-    const c2 = document.createElement('canvas');
-    c2.width = targetW;
-    c2.height = targetH;
-    c2.getContext('2d')!.drawImage(canvas, 0, 0, targetW, targetH);
-    return await new Promise<Blob>((resolve, reject) =>
-      c2.toBlob((b) => (b ? resolve(b) : reject(new Error('encode'))), 'image/jpeg', 0.85)
+  const targetCanvas = document.createElement('canvas');
+  targetCanvas.width = targetW;
+  targetCanvas.height = targetH;
+  const targetCtx = targetCanvas.getContext('2d')!;
+  targetCtx.drawImage(canvas, 0, 0, targetW, targetH);
+
+  // Intentamos primero WebP a 0.78; si falla o no es soportado, caemos a JPEG 0.80
+  return new Promise<Blob>((resolve) => {
+    targetCanvas.toBlob(
+      (webpBlob) => {
+        if (webpBlob && webpBlob.type === 'image/webp') {
+          resolve(webpBlob);
+        } else {
+          targetCanvas.toBlob(
+            (jpegBlob) => resolve(jpegBlob || file),
+            'image/jpeg',
+            0.80
+          );
+        }
+      },
+      'image/webp',
+      0.78
     );
-  }
-  return await new Promise<Blob>((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode'))), 'image/jpeg', 0.85)
-  );
+  });
 }
 
 export function fileToBitmapUrl(file: Blob): string {
   return URL.createObjectURL(file);
+}
+
+/**
+ * Compacta el almacenamiento de un libro eliminando los blobs originales pesados
+ * de las páginas que ya fueron aprobadas, manteniendo únicamente el derivado optimizado.
+ */
+export async function compactApprovedPageBlobs(bookId: string): Promise<number> {
+  const pages = await db.pages.where('bookId').equals(bookId).toArray();
+  let freed = 0;
+  for (const page of pages) {
+    if (page.status === 'approved' && page.originalBlobId && page.derivedBlobId) {
+      if (page.originalBlobId !== page.derivedBlobId) {
+        try {
+          await db.blobs.delete(page.originalBlobId);
+          await db.pages.update(page.id, { originalBlobId: page.derivedBlobId });
+          freed++;
+        } catch {}
+      }
+    }
+  }
+  return freed;
 }

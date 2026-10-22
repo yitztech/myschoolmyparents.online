@@ -43,3 +43,38 @@ test('la versión de app.json es coherente', () => {
   assert.match(v.version, /^\d+\.\d+\.\d+$/);
   assert.match(v.build, /^\d+$/);
 });
+
+test('release-manifest.json se estructura correctamente', async () => {
+  const { mkdtemp, writeFile, readFile, rm } = await import('node:fs/promises');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { execSync } = await import('node:child_process');
+
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'release-test-'));
+  try {
+    const mockAndroid = {
+      fullName: 'MySchoolMyParents-Online-v0.4.0+6.apk',
+      file: 'MySchoolMyParents-Online-v0.4.0.apk',
+      version: '0.4.0',
+      build: 6,
+      size: 123456,
+      sha256: 'deadbeef1234',
+    };
+    await writeFile(path.join(tmp, 'android.json'), JSON.stringify(mockAndroid));
+    await writeFile(path.join(tmp, mockAndroid.fullName), 'dummy-apk');
+
+    execSync(`node scripts/release-notes.mjs ${tmp}`, { stdio: 'pipe' });
+
+    const manifestRaw = await readFile(path.join(tmp, 'release-manifest.json'), 'utf8');
+    const manifest = JSON.parse(manifestRaw);
+
+    assert.equal(manifest.version, '0.4.0');
+    assert.equal(manifest.build, 6);
+    assert.equal(manifest.tag, 'v0.4.0');
+    assert.equal(manifest.android.file, mockAndroid.fullName);
+    assert.equal(manifest.android.sha256, mockAndroid.sha256);
+    assert.ok(manifest.android.url.includes('releases/download/v0.4.0/'));
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});

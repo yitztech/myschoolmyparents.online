@@ -8,7 +8,7 @@
  *
  *   node scripts/release-notes.mjs [dist] > notas.md
  */
-import { copyFile, readFile } from 'node:fs/promises';
+import { copyFile, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { LATEST_NAMES } from './lib/installer-names.mjs';
 
@@ -38,6 +38,34 @@ if (android) await copyFile(path.join(dist, android.fullName), path.join(dist, L
 if (ios) await copyFile(path.join(dist, ios.fullName), path.join(dist, LATEST_NAMES.ios));
 
 const { version, build } = android ?? ios;
+
+const releaseManifest = {
+  version,
+  build: Number(build),
+  tag: `v${version}`,
+  publishedAt: new Date().toISOString(),
+  android: android
+    ? {
+        file: android.fullName,
+        latestAlias: LATEST_NAMES.android,
+        size: android.size,
+        sha256: android.sha256,
+        url: `https://github.com/yitztech/myschoolmyparents.online/releases/download/v${version}/${android.fullName}`,
+        latestUrl: `https://github.com/yitztech/myschoolmyparents.online/releases/latest/download/${LATEST_NAMES.android}`,
+      }
+    : null,
+  ios: ios
+    ? {
+        file: ios.fullName,
+        latestAlias: LATEST_NAMES.ios,
+        size: ios.size,
+        sha256: ios.sha256,
+        url: `https://github.com/yitztech/myschoolmyparents.online/releases/download/v${version}/${ios.fullName}`,
+        latestUrl: `https://github.com/yitztech/myschoolmyparents.online/releases/latest/download/${LATEST_NAMES.ios}`,
+      }
+    : null,
+};
+await writeFile(path.join(dist, 'release-manifest.json'), JSON.stringify(releaseManifest, null, 2) + '\n');
 const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const fila = (m, alias) =>
   `| \`${m.fullName}\` | ${mb(m.size)} | \`${m.sha256}\` |\n| \`${m.file}\` y \`${alias}\` | | mismo archivo |`;

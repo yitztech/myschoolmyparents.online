@@ -1,21 +1,13 @@
 # Backend NestJS — MySchoolMyParents.
 # Multi-stage por entorno (ver docker-compose*.yml):
 #   dev:  `nest start --watch` (hot-reload; el src se monta por volumen).
-#   prod: compila TypeScript y arranca solo con dependencias prod.
+#   prod: compila TypeScript y arranca solo con dependencias prod optimizadas.
 # El runtime corre como usuario `node` (no root).
 FROM node:24.21-alpine AS base
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci && npm cache clean --force && chown -R node:node /app
-# Modelos de Tesseract horneados en la imagen. Sin esto, el primer OCR tras
-# cada reinicio los baja de un CDN externo: en prod el cache vive en un
-# tmpfs, así que se pierde en cada arranque. Si la descarga falla, la imagen
-# se construye igual y tesseract.js cae a su descarga en runtime.
-#
-# La variante es la misma que usa tesseract.js v7 por defecto
-# (ver node_modules/tesseract.js/src/worker-script/index.js): `4.0.0_best_int`,
-# solo LSTM. La variante `4.0.0` a secas incluye además el motor Legacy, que
-# esta app no usa, y pesa seis veces más (41 MB frente a 8 MB en la imagen).
+COPY --chown=node:node package.json package-lock.json* ./
+RUN npm ci --no-audit --no-fund && npm cache clean --force
+# Modelos de Tesseract horneados en la imagen (eng + spa).
 ARG TESSDATA_VARIANT=4.0.0_best_int
 RUN mkdir -p /app/tessdata \
  && for L in eng spa; do \
@@ -37,8 +29,10 @@ RUN npm run build
 FROM node:24.21-alpine AS prod
 WORKDIR /app
 ENV NODE_ENV=production
-COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev && npm cache clean --force && chown -R node:node /app
+COPY --chown=node:node package.json package-lock.json* ./
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force \
+ && find node_modules -name "*.d.ts" -delete \
+ && find node_modules -name "*.map" -delete
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=base --chown=node:node /app/tessdata ./tessdata
 USER node

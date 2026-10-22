@@ -84,3 +84,17 @@ services:
     depends_on:
       - frontend
       - backend
+
+  mailpit:
+    container_name: msm-mailpit-dev
+    image: axllent/mailpit:latest
+    networks:
+      - public
+    ports:
+      # Interfaz web de correos entrantes
+      - "127.0.0.1:8025:8025"
+    expose:
+      # Puerto SMTP para el backend (1025)
+      - "1025"
+    logging: *log
+    restart: unless-stopped

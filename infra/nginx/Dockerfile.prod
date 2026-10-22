@@ -7,7 +7,7 @@
 FROM node:24.21-alpine AS frontend-build
 WORKDIR /app
 COPY apps/frontend/package.json apps/frontend/package-lock.json ./
-RUN npm ci && npm cache clean --force
+RUN npm ci --no-audit --no-fund && npm cache clean --force
 COPY apps/frontend/ ./
 # La página /descargas muestra la versión de la app móvil (ver vite.config.ts).
 COPY apps/mobile/app.json /mobile/app.json

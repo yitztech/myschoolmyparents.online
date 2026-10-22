@@ -37,7 +37,7 @@ export async function transformImage(uri: string, options: ImageTransformOptions
   try {
     const { width, height } = await imageSize(uri);
     const result = await ImageManipulator.manipulateAsync(uri, buildImageActions(width, height, options), {
-      compress: 0.85,
+      compress: 0.78,
       format: ImageManipulator.SaveFormat.JPEG,
     });
     const target = new File(`${uri}.adjusted.jpg`);
