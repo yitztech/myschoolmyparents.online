@@ -59,7 +59,7 @@ Réplica web de la app MyParentMyChildren (Flutter) con **React + shadcn + Docke
 ```
 .
   docker-compose.yml          # DEV, base: db + backend + nginx (sin envs)
-  docker-compose.override.yml # DEV (auto): vite dev + nest watch, puertos :6060/:5173/:3001/:5432
+  docker-compose.override.yml # DEV (auto): vite dev + nest watch, puertos :6060/:5173/:3001/:5462/:8027
   docker-compose.prod.yml     # PROD en Coolify: autónomo, solo imágenes de GHCR, sin puertos
   .env.example                # plantilla de DEV → copiar a .env.dev (ningún .env se versiona)
   .github/workflows/deploy.yml # publica backend y nginx en GHCR → webhook de Coolify → /version.json
@@ -191,7 +191,7 @@ el código de recuperación sale por los logs del backend
 | Imágenes | se construyen en local | las construye GitHub Actions y las publica en GHCR; el servidor no compila |
 | Frontend | `vite dev` con HMR (`frontend:5173`) | estáticos Vite horneados en nginx (sin Node en prod) |
 | Backend | `nest start --watch`, logs legibles | `node dist/main.js`, logs JSON |
-| Puertos | `:6060` (nginx), `:5173` (vite), `:3001` (api), `:5432` (db), solo en loopback | ninguno: Traefik → `nginx:80` |
+| Puertos | `:6060` (nginx), `:5173` (vite), `:3001` (api), `:5462` (db), `:8027` (Mailpit), solo en loopback | ninguno: Traefik → `nginx:80` |
 | PostgreSQL | `postgres:18-alpine`, volumen `pgdata18` | `postgres:18-alpine`, volumen `pgdata` |
 | Variables | `.env.dev`, copiado de `.env.example` (ignorado por git) | las inyecta Coolify; ningún `.env` |
 | CORS | localhost | `SITE_URL` |
@@ -334,7 +334,7 @@ añade un salto extra en la ruta más crítica de la app.
 - **Prod con filesystem de solo lectura** (backend y nginx, con `tmpfs`
   en `/tmp` y cachés nginx). El OCR cachea el `.traineddata` en el tmp del
   sistema, no en `/app`.
-- **Dev solo en loopback** (`127.0.0.1:6060/:5173/:3001/:5432`, nada a la LAN),
+- **Dev solo en loopback** (`127.0.0.1:6060/:5173/:3001/:5462/:8027`, nada a la LAN),
   código montado de solo lectura (`:ro`) y nginx tolerante a reinicios del
   `vite dev` (resolver Docker + upstreams por variable).
 - **Límites en prod** (`mem_limit` en todos los servicios): backend 1G/2 CPU,
@@ -366,7 +366,7 @@ añade un salto extra en la ruta más crítica de la app.
 # DEV (hot-reload): entrada única http://localhost:6060
 cp .env.example .env.dev    # la primera vez (.env.dev no se versiona)
 docker compose --env-file .env.dev up --build
-# PostgreSQL directo: localhost:5432 (msm / myschoolmyparents)
+# PostgreSQL directo: localhost:5462 (msm / myschoolmyparents)
 # API directa:        http://localhost:3001/api/health
 ```
 

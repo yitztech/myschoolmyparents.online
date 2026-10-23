@@ -29,7 +29,7 @@
     "mobile:version": "node scripts/mobile-version.mjs",
     "mobile:impact": "node scripts/mobile-impact.mjs",
     "dev:doctor": "node scripts/dev-doctor.mjs",
-    "dev:mail": "node -e 'const open = process.platform === \"darwin\" ? \"open\" : \"xdg-open\"; require(\"child_process\").execSync(`${open} http://localhost:8025`)'",
+    "dev:mail": "node -e 'const open = process.platform === \"darwin\" ? \"open\" : \"xdg-open\"; require(\"child_process\").execSync(`${open} http://localhost:8027`)'",
     "db:backup": "sh scripts/backup-db.sh",
     "db:restore": "sh scripts/restore-db.sh"
   },
