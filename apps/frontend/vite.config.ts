@@ -55,9 +55,9 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 5173,
-      // OrbStack expone cada contenedor como <servicio>.<proyecto>.orb.local.
-      // Sin esto, `npm run dev` tras el proxy rechaza el Host con 403.
-      allowedHosts: ['localhost', '.orb.local'],
+      // Tras el nginx de desarrollo el Host es localhost (ver infra/nginx/nginx.dev.conf);
+      // cualquier otro lo rechaza Vite con 403.
+      allowedHosts: ['localhost'],
       proxy: {
         '/api': {
           target: process.env.VITE_API_URL || 'http://backend:3001',
@@ -68,12 +68,9 @@ export default defineConfig(({ mode }) => {
     preview: {
       host: true,
       port: 4173,
-      // El dominio del nginx en OrbStack (ver OrbStack > nginx > Domain):
-      //   nginx.my-school-my-parents.orb.local
-      // llega al `vite preview` con Host = ese dominio a través del proxy
-      // nginx -> frontend:4173. Hay que permitirlo o responde 403
-      // "Blocked request. This host is not allowed".
-      allowedHosts: ['localhost', '.orb.local'],
+      // Tras el proxy nginx -> frontend:4173 llega con Host = localhost; cualquier otro
+      // responde 403 "Blocked request. This host is not allowed".
+      allowedHosts: ['localhost'],
     },
   }
 })

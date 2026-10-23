@@ -194,7 +194,7 @@ el código de recuperación sale por los logs del backend
 | Puertos | `:6060` (nginx), `:5173` (vite), `:3001` (api), `:5432` (db), solo en loopback | ninguno: Traefik → `nginx:80` |
 | PostgreSQL | `postgres:18-alpine`, volumen `pgdata18` | `postgres:18-alpine`, volumen `pgdata` |
 | Variables | `.env.dev`, copiado de `.env.example` (ignorado por git) | las inyecta Coolify; ningún `.env` |
-| CORS | localhost + dominio OrbStack | `SITE_URL` |
+| CORS | localhost | `SITE_URL` |
 
 Ningún `.env` se versiona, salvo las plantillas `*.example`. El repo es
 público: los valores de `.env.example` son de juguete y no se usan nunca fuera

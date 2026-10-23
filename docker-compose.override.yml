@@ -1,7 +1,7 @@
 # ─── DEV local (override automático) ───
 # Se carga solo al usar `docker compose --env-file .env.dev up --build`.
 # Hot-reload (vite dev + nest watch), logs legibles.
-# Entrada única: http://localhost:6060 (+ dominio OrbStack del servicio nginx).
+# Entrada única: http://localhost:6060.
 # Aislamiento dev: puertos solo en loopback (no se exponen a la LAN),
 # código montado de solo lectura, mismas protecciones que prod.
 
