@@ -1,7 +1,7 @@
 # ─── DEV local (override automático) ───
 # Se carga solo al usar `docker compose --env-file .env.dev up --build`.
 # Hot-reload (vite dev + nest watch), logs legibles.
-# Entrada única: http://localhost:6060 (+ dominio OrbStack del servicio nginx).
+# Entrada única: http://localhost:6060.
 # Aislamiento dev: puertos solo en loopback (no se exponen a la LAN),
 # código montado de solo lectura, mismas protecciones que prod.
 
@@ -16,7 +16,7 @@ services:
     container_name: msm-db-dev
     ports:
       # Acceso directo a PostgreSQL desde el host (psql, clientes GUI).
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5462:5432"
 
   backend:
     container_name: msm-backend-dev
@@ -92,7 +92,7 @@ services:
       - public
     ports:
       # Interfaz web de correos entrantes
-      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:8027:8025"
     expose:
       # Puerto SMTP para el backend (1025)
       - "1025"
