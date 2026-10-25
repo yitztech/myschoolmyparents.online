@@ -65,8 +65,8 @@ const PORTS = [
   { port: 6060, name: 'nginx (dev gateway)' },
   { port: 5173, name: 'Vite frontend' },
   { port: 3001, name: 'NestJS backend' },
-  { port: 5432, name: 'PostgreSQL' },
-  { port: 8025, name: 'Mailpit (SMTP web UI)' },
+  { port: 5462, name: 'PostgreSQL' },
+  { port: 8027, name: 'Mailpit (SMTP web UI)' },
 ];
 
 async function checkPort(port) {

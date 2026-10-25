@@ -18,6 +18,8 @@ RUN mkdir -p /app/tessdata \
 COPY --chown=node:node . ./
 
 FROM base AS dev
+# nest start --watch escribe tsconfig.build.tsbuildinfo en /app (lo crea WORKDIR como root)
+RUN chown node:node /app
 USER node
 ENV NODE_ENV=development
 EXPOSE 3001
