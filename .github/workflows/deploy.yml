@@ -128,3 +128,20 @@ jobs:
             fi
             sleep 10
           done
+
+      # AGENTS.md §9.2: lo que Search Console vigila, comprobado en producción tras cada despliegue
+      - name: Comprobar la indexación
+        if: steps.coolify.outputs.listo == 'true'
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          fallo() { echo "::error::$1"; exit 1; }
+          [ "$(curl -s -o /dev/null -w '%{http_code}' "$SITE_URL/no-existe-$RANDOM")" = 404 ] || fallo "Una ruta inexistente no responde 404 (soft 404)"
+          robots=$(curl -sf "$SITE_URL/robots.txt") || fallo "Sin /robots.txt"
+          ! printf '%s\n' "$robots" | grep -Eq '^Disallow:[[:space:]]*[^[:space:]]' || fallo "robots.txt lleva Disallow"
+          for loc in $(curl -sf "$SITE_URL/sitemap.xml" | grep -o '<loc>[^<]*' | sed 's/<loc>//'); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' "$loc")" = 200 ] || fallo "$loc del sitemap no responde 200"
+            canonical=$(curl -s "$loc" | grep -o '<link rel="canonical" href="[^"]*"' | sed 's/.*href="//; s/"$//')
+            [ "$canonical" = "$loc" ] || fallo "$loc tiene canonical $canonical"
+          done
+          echo "Indexación correcta"

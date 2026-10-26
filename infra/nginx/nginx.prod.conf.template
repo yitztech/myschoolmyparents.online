@@ -27,12 +27,38 @@ map $http_x_forwarded_proto $forwarded_proto {
   https https;
 }
 
+# ── Indexación (AGENTS.md §9.2): cada URL es pública, inexistente (404) o movida (301) ──
+# Ruta pedida, sin la query
+map $request_uri $spa_path {
+  "~^(?<spa_p>/[^?]*)" $spa_p;
+  default /;
+}
+# Páginas de la SPA (PUBLIC_PAGES de apps/frontend/src/App.tsx, más la app en /). El resto, 404.
+map $spa_path $spa_route {
+  default                  missing;
+  /                        public;
+  /landing                 public;
+  /descargas               public;
+  /legal/privacidad        public;
+  /legal/terminos          public;
+  /legal/cookies           public;
+  /legal/eliminar-cuenta   public;
+}
+map $spa_route $spa_robots { missing "noindex"; default ""; }
+# canonical en el HTML inicial: la propia URL, sin query (antes de <title>, para no chocar con la analítica)
+map $spa_route $spa_canonical {
+  public  '<link rel="canonical" href="https://$host$spa_path"/><title>';
+  default '<title>';
+}
+
 server {
   listen 80;
   server_name _;
 
   root /usr/share/nginx/html;
   index index.html;
+  # Detrás de Traefik nginx ve http: las redirecciones absolutas saldrían con http:// (dos saltos)
+  absolute_redirect off;
 
   # 16m, no 20m: el límite real del backend son 15 MB por imagen (ver
   # main.ts). Así el rechazo lo da la app con un mensaje útil en vez de
@@ -74,11 +100,51 @@ server {
   # Aquí se inserta el script de Umami si está configurado (vacío si no; lo
   # genera 16-analytics.sh al arrancar). Todas las rutas de la SPA acaban en
   # esta location a través del try_files de abajo.
+  # robots.txt y sitemap.xml de verdad (antes respondía la SPA con 200). Sin Disallow: lo que no debe
+  # indexarse lleva X-Robots-Tag: noindex
+  location = /robots.txt {
+    default_type text/plain;
+    add_header Cache-Control "public, max-age=3600" always;
+    include /etc/nginx/snippets/security-headers.conf;
+    return 200 "User-agent: *\nAllow: /\nSitemap: https://$host/sitemap.xml\n";
+  }
+  location = /sitemap.xml {
+    default_type application/xml;
+    add_header Cache-Control "public, max-age=3600" always;
+    include /etc/nginx/snippets/security-headers.conf;
+    return 200 '<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url><loc>https://$host/</loc></url>
+<url><loc>https://$host/landing</loc></url>
+<url><loc>https://$host/descargas</loc></url>
+<url><loc>https://$host/legal/privacidad</loc></url>
+<url><loc>https://$host/legal/terminos</loc></url>
+<url><loc>https://$host/legal/cookies</loc></url>
+<url><loc>https://$host/legal/eliminar-cuenta</loc></url>
+</urlset>
+';
+  }
+
+  # Una sola forma por URL: sin barra final; /legal mostraba la misma página que /legal/privacidad
+  location ~ ^(?<sin_barra>/.+?)/+$ {
+    return 301 $sin_barra$is_args$args;
+  }
+  location = /legal {
+    return 301 /legal/privacidad;
+  }
+
+  # Ruta inexistente: 404 con la SPA, noindex y sin canonical (nunca un 200: soft 404)
+  error_page 404 /index.html;
+
   location = /index.html {
+    # Pedida tal cual por el navegador (no por un try_files ni un error_page): a la raíz
+    if ($request_uri ~ "^/index\.html") { return 301 /; }
     expires -1;
     add_header Cache-Control "no-store" always;
+    add_header X-Robots-Tag $spa_robots always;
     include /etc/nginx/snippets/security-headers.conf;
     include /etc/nginx/conf.d/analytics.inc;
+    sub_filter '<title>' '$spa_canonical';
   }
 
   # Descarga directa de la última versión de las apps (página /descargas).
@@ -87,16 +153,22 @@ server {
   # cuenta estas peticiones aunque el enlace se comparta fuera de la web.
   location = /descargas/android {
     add_header Cache-Control "no-store" always;
+    add_header X-Robots-Tag "noindex" always;
     return 302 https://github.com/yitztech/myschoolmyparents.online/releases/latest/download/MySchoolMyParents-Online-android.apk;
   }
   location = /descargas/ios {
     add_header Cache-Control "no-store" always;
+    add_header X-Robots-Tag "noindex" always;
     return 302 https://github.com/yitztech/myschoolmyparents.online/releases/latest/download/MySchoolMyParents-Online-ios-sin-firmar.ipa;
   }
 
   # SPA: cualquier ruta no estática sirve index.html.
   location / {
-    try_files $uri $uri/ /index.html;
+    try_files $uri @spa;
+  }
+  location @spa {
+    if ($spa_route = missing) { return 404; }
+    rewrite ^ /index.html last;
   }
 
   # El healthcheck del backend va directo al contenedor, no pasa por aquí,
@@ -109,6 +181,9 @@ server {
 
   # API (contenedor `backend`)
   location /api/ {
+    # Fuera del buscador con la cabecera, nunca con Disallow (un add_header aquí anula los del server)
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header X-Robots-Tag "noindex" always;
     proxy_pass http://backend:3001;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
