@@ -1,4 +1,4 @@
-import { db, pruneOrphanBlobs, touchBook } from './db';
+import { blobDe, db, pruneOrphanBlobs, touchBook } from './db';
 import { compactApprovedPageBlobs } from './images';
 import { recognizeImage, ocrLangForLocale } from './ocr';
 import { splitParagraphs, uid } from './types';
@@ -39,7 +39,7 @@ export async function pump() {
         if (!blobRec) throw Object.assign(new Error('missing_image'), { code: 'missing_image' });
         const book = await db.books.get(job.bookId);
         const lang = ocrLangForLocale(book?.learningLocale ?? 'en-US');
-        const { rawText, paragraphs } = await recognizeImage(blobRec.blob, lang);
+        const { rawText, paragraphs } = await recognizeImage(blobDe(blobRec), lang);
         const paras = paragraphs.length ? paragraphs : splitParagraphs(rawText);
         // Crea/actualiza borrador (revisión obligatoria)
         const existing = await db.drafts.where('pageId').equals(job.pageId).first();

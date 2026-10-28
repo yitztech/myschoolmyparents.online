@@ -17,7 +17,7 @@ const buttonVariants = cva(
         ghost: 'border-transparent shadow-none hover:bg-paper-deep hover:border-ink',
         destructive: 'bg-white text-coral-deep border-coral-deep shadow-[3px_3px_0_#B9320A] hover:bg-[#FFF0E8]',
       },
-      size: { default: '', sm: 'min-h-[40px] px-3 text-[13px] rounded-lg', lg: 'px-6 py-3 text-base', icon: 'p-2' },
+      size: { default: '', sm: 'min-h-[44px] px-3 text-[13px] rounded-lg', lg: 'px-6 py-3 text-base', icon: 'p-2' },
     },
     defaultVariants: { variant: 'default', size: 'default' },
   }
