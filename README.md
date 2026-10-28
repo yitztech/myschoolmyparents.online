@@ -16,7 +16,9 @@ apps/
 infra/nginx/  Proxy: dev (vite + api) y prod (estáticos + api)
 e2e/          Pruebas end-to-end (Playwright), paquete npm aparte
 .github/workflows/
-  ci.yml             web (build + lint) y móvil (tipos + pruebas), según lo que cambie
+  ci.yml             web (build + lint + escenarios E2E), móvil (tipos + pruebas) y seguridad (gitleaks + audits), según lo que cambie
+  codeql.yml         análisis de código (JS/TS) en cada PR y semanal contra main
+  security-weekly.yml Trivy (dependencias y secretos) + ZAP baseline contra el stack, cada semana
   mobile.yml         OTA (EAS Update) o build de tienda cuando cambia apps/mobile en main
   mobile-release.yml instaladores directos (APK firmado + IPA sin firmar) en GitHub Releases, a mano
 scripts/             versión móvil, impacto OTA/tienda y publicación de APK
@@ -386,10 +388,10 @@ con tus datos locales.
 
 Variables de `.env.dev`: `POSTGRES_PASSWORD`, `JWT_SECRET`,
 `JWT_EXPIRES_IN`, `CORS_ORIGIN`, `LOG_LEVEL`, `TRUST_PROXY`, `APP_PUBLIC_URL`,
-`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`,
-`SMTP_FROM`, `VITE_AUTH_API_URL`, `VITE_GOOGLE_CLIENT_ID`. La plantilla
-comentada está en `.env.example`; las de producción, en *Variables de la
-plataforma*.
+`AUTH_RATE_LIMIT_MAX`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`,
+`SMTP_PASSWORD`, `SMTP_FROM`, `VITE_AUTH_API_URL`, `VITE_GOOGLE_CLIENT_ID`.
+La plantilla comentada está en `.env.example`; las de producción, en
+*Variables de la plataforma*.
 
 Desarrollo sin Docker:
 
@@ -416,7 +418,22 @@ npm run install-browsers                   # descarga Chromium
 npm test
 ```
 
-17 tests en tres bloques:
+56 tests, en dos capas:
+
+**Especificación (Gherkin en español).** Los `.feature` de `e2e/features/` describen
+el sistema en lenguaje de negocio; los materializa `tests/gherkin.spec.ts` con un
+runner mínimo propio (no playwright-bdd). Cada escenario → una prueba:
+
+- Característica por área (`registro.feature`, `cancelaciones.feature`, `citas_y_lectura.feature`,
+  `flujo_completo.feature`, `seguridad_acceso.feature`, `plataforma_web.feature`,
+  `limites_campos.feature`); `movil.feature` queda entero etiquetado `@pendiente`
+  hasta que existan los pasos de la interfaz `ui` común para Android/iOS (§38).
+- Etiquetas: nivel de característica (genera `describe`) y de escenario (genera
+  `test`, con el nombre completo como título); `@pendiente` retira el escenario.
+- `Esquema del escenario` + `Ejemplos:` materializa una prueba por fila de la
+  tabla (los `<parámetros>` se sustituyen en cada paso).
+
+**Playwright directo (casos técnicos).**
 
 - **Flujo principal** (`tests/flujo.spec.ts`): crear un libro, subir la página
   de ejemplo, OCR en el backend, aprobar el borrador y verlo en el lector, sin
@@ -424,6 +441,12 @@ npm test
 - **Interfaz** (`tests/auth.spec.ts`): registro, política de contraseña,
   cierre de sesión, login, credenciales incorrectas y el primer paso de la
   recuperación.
+- **Legal y descargas** (`tests/legal.spec.ts`): páginas legales y `/descargas`
+  se ven sin sesión, el pie las enlaza, los botones de descarga cuentan el clic
+  en Umami, `/descargas/<plataforma>` redirige al instalador y eliminar la cuenta
+  cubre con contraseña equivocada y definitiva.
+- **i18n y a11y** (`tests/i18n-a11y.spec.ts`): conmutador de idiomas (5), enlaces
+  reales de release, y en el lector alto contraste, escalado y atajos de teclado.
 - **API** (`tests/api.spec.ts`, sin navegador): que el OCR exija sesión y
   rechace lo que no sea una imagen, que la recuperación responda igual exista
   o no la cuenta, y que el `ValidationPipe` rechace campos fuera del contrato.
@@ -454,3 +477,6 @@ docker compose --env-file .env.dev exec db \
 - Página sin texto: recapturar / editar manual / excluir, sin bloquear el lote.
 - Borrado en cascada cancela trabajos y detiene audio.
 - Accesibilidad: targets ≥48px, regiones `status/alert`, foco lógico, texto lector 18–36pt, layout 1/2/3 cols, máx. 1100px.
+- Límites de texto (§6.3): registro, login, recuperación y título del libro llevan
+  `maxLength` y avisan al pegar un texto más largo (no recortan en silencio); una
+  prueba Gherkin de esquema (`limites_campos.feature`) lo cubre campo por campo.

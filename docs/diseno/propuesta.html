@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Propuesta de diseño · MySchoolMyParents Online</title>
+<style>
+  /* ─── Tokens del sistema (docs/PROPUESTA-DISENO.md §2.1) ─── */
+  :root {
+    --paper: #FFFEF9;
+    --paper-deep: #FFF8EC;
+    --ink: #262134;
+    --ink-soft: #6E6A7C;
+    --sun: #FFC52E;         /* primario: contenido (crear libro, play) */
+    --coral: #FF7A59;       /* foco de cuenta: entrar, crear cuenta, danger suave */
+    --coral-deep: #C2452A;  /* errores (AA sobre papel) */
+    --leaf: #3FA37C;        /* éxito y estados tranquilos */
+    --leaf-bg: #E3F6EA;
+    --alert-bg: #FDEBE4;
+    --sky: #7DBBE6;         /* idioma de aprendizaje (EN, DE…) */
+    --sky-bg: #EAF4FC;
+    --radius: 1rem;
+    --border: 2px solid var(--ink);
+    --shadow-sticker: 6px 6px 0 var(--ink);
+    --shadow-sticker-sm: 3px 3px 0 var(--ink);
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Karla', system-ui, sans-serif;
+    --esp-1: 4px; --esp-2: 8px; --esp-3: 12px; --esp-4: 16px;
+    --esp-5: 24px; --esp-6: 32px; --esp-7: 48px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #EFECE3;
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    padding: var(--esp-6) var(--esp-4) var(--esp-7);
+  }
+
+  .mock-cabecera {
+    max-width: 1180px;
+    margin: 0 auto var(--esp-6);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--esp-4);
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .mock-titulo {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.6rem;
+    margin: 0;
+  }
+  .mock-titulo small { display: block; font-size: .8rem; font-weight: 500; font-family: var(--font-body); color: var(--ink-soft); }
+  .mock-pestanas {
+    display: flex;
+    gap: var(--esp-2);
+    flex-wrap: wrap;
+  }
+  .mock-pestanas button {
+    font: 700 0.95rem var(--font-body);
+    color: var(--ink);
+    background: var(--paper);
+    border: var(--border);
+    border-radius: 999px;
+    padding: var(--esp-2) var(--esp-4);
+    cursor: pointer;
+    box-shadow: var(--shadow-sticker-sm);
+    transition: transform .12s ease, background-color .12s ease;
+  }
+  .mock-pestanas button:hover { background: var(--paper-deep); transform: translateY(-2px); }
+  .mock-pestanas button[aria-selected="true"] { background: var(--sun); }
+  :is(button, a):focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+
+  .lona {
+    display: none;
+    max-width: 1180px;
+    margin: 0 auto;
+    background: var(--paper);
+    border: var(--border);
+    border-radius: calc(var(--radius) * 1.5);
+    box-shadow: var(--shadow-sticker);
+    padding: var(--esp-6);
+  }
+  .lona[hidden] { display: none; }
+  .lona.activa { display: block; }
+  .lona > h2 { margin: 0 0 var(--esp-2); font-family: var(--font-display); font-weight: 900; }
+  .lona > p.nota { margin: 0 0 var(--esp-5); color: var(--ink-soft); font-size: .9rem; max-width: 70ch; }
+
+  /* ─── Piezas comunes: sticker, botón, campo, mensajes ─── */
+  .sticker {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--esp-2);
+    font-family: var(--font-body);
+    font-weight: 700;
+    color: var(--ink);
+    border: var(--border);
+    border-radius: var(--radius);
+    padding: var(--esp-3) var(--esp-5);
+    box-shadow: var(--shadow-sticker-sm);
+    cursor: pointer;
+    transition: transform .12s ease, background-color .12s ease;
+  }
+  .sticker:hover { transform: translateY(-2px); }
+  .sticker:active { transform: translateY(0); }
+  .sticker.sol { background: var(--sun); }
+  .sticker.coral { background: var(--coral); color: #fff; }
+  .sticker.papel { background: var(--paper); }
+
+  .campo { display: grid; gap: 4px; margin-bottom: var(--esp-4); }
+  .campo label { font-weight: 700; font-size: .9rem; }
+  .campo input {
+    font: 500 1rem var(--font-body);
+    color: var(--ink);
+    background: #fff;
+    border: var(--border);
+    border-radius: calc(var(--radius) / 1.6);
+    padding: 10px 12px;
+    width: 100%;
+  }
+  .campo input.error { border-color: var(--coral-deep); }
+  .campo .ayuda { font-size: .78rem; color: var(--ink-soft); }
+
+  .msg-error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--esp-2);
+    background: var(--alert-bg);
+    border: 2px solid var(--coral-deep);
+    border-radius: calc(var(--radius) / 1.7);
+    color: var(--coral-deep);
+    font-weight: 700;
+    font-size: .88rem;
+    padding: var(--esp-3);
+    margin: var(--esp-2) 0 var(--esp-4);
+  }
+  .msg-exito {
+    display: flex;
+    align-items: center;
+    gap: var(--esp-2);
+    background: var(--leaf-bg);
+    border: 2px solid var(--leaf);
+    border-radius: calc(var(--radius) / 1.7);
+    color: #1E6D52;
+    font-weight: 700;
+    font-size: .9rem;
+    padding: var(--esp-3) var(--esp-4);
+    transform: rotate(-.5deg);
+  }
+  .msg-recorte {
+    color: var(--coral-deep);
+    font-weight: 700;
+    font-size: .8rem;
+    margin-top: 4px;
+  }
+
+  .msg-recorte-demo {
+    display: flex;
+    align-items: center;
+    gap: var(--esp-2);
+    background: #fff;
+    border: 2px solid var(--coral-deep);
+    border-radius: calc(var(--radius) / 1.7);
+    color: var(--coral-deep);
+    font-weight: 700;
+    font-size: .9rem;
+    padding: var(--esp-3) var(--esp-4);
+  }
+  .esquina-doblada {
+    position: relative;
+    overflow: hidden;
+  }
+  .esquina-doblada::after {
+    content: "";
+    position: absolute;
+    top: 0; right: 0;
+    width: 26px; height: 26px;
+    background: var(--paper-deep);
+    border-left: var(--border);
+    border-bottom: var(--border);
+    border-top-right-radius: 10px;
+  }
+
+  /* ─── 1 · Biblioteca (escritorio) ─── */
+  .biblioteca-grid {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: var(--esp-5);
+  }
+  .barra-app {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--esp-4);
+    margin-bottom: var(--esp-5);
+    padding-bottom: var(--esp-4);
+    border-bottom: var(--border);
+  }
+  .logo-marca { display: flex; align-items: center; gap: var(--esp-3); font-family: var(--font-display); font-weight: 900; font-size: 1.15rem; }
+  .logo-sello {
+    display: inline-grid;
+    place-items: center;
+    width: 40px; height: 40px;
+    background: var(--sun);
+    border: var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sticker-sm);
+    transform: rotate(-4deg);
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+  }
+  .estante {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--esp-4);
+    padding: var(--esp-5) var(--esp-4) 0;
+    border-bottom: 10px solid var(--ink);
+    border-radius: 0 0 4px 4px;
+  }
+  .lomo {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: var(--border);
+    border-radius: 10px 10px 4px 4px;
+    padding: var(--esp-4) var(--esp-3) var(--esp-3);
+    min-height: 190px;
+    box-shadow: var(--shadow-sticker-sm);
+    transition: transform .12s ease;
+    text-align: left;
+    cursor: pointer;
+  }
+  .lomo:hover { transform: translateY(-2px); }
+  .lomo .franja-idioma {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 26px;
+    background: var(--sky);
+    border-bottom: var(--border);
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--esp-2);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+  .lomo h3 {
+    margin: var(--esp-5) 0 0;
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.05rem;
+    line-height: 1.2;
+    min-height: 2.6em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .lomo .meta { margin-top: auto; font-size: .72rem; color: var(--ink-soft); font-weight: 700; }
+  .lomo .cinta-progreso {
+    margin-top: 6px;
+    height: 10px;
+    background: var(--paper-deep);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .lomo .cinta-progreso span { display: block; height: 100%; background: var(--sun); }
+  .lomo.vacio {
+    border-style: dashed;
+    border-color: var(--ink-soft);
+    box-shadow: none;
+    background: transparent;
+    cursor: default;
+  }
+  .lomo.vacio h3 { color: var(--ink-soft); font-size: .95rem; }
+
+  .panel-lateral { display: grid; gap: var(--esp-4); align-self: start; }
+  .boton-flotante { position: sticky; top: var(--esp-4); transform: rotate(2deg); font-size: 1.05rem; }
+  .synton { font-size: .85rem; color: var(--ink-soft); border-left: 4px solid var(--sun); padding-left: var(--esp-3); }
+
+  .estado-vacio-demo {
+    border: 2px dashed var(--ink-soft);
+    border-radius: var(--radius);
+    background: var(--paper-deep);
+    padding: var(--esp-5);
+    text-align: center;
+  }
+  .estado-vacio-demo svg { display: block; margin: 0 auto var(--esp-3); }
+  .estado-vacio-demo strong { font-family: var(--font-display); font-size: 1.1rem; }
+
+  /* ─── 2 · Lector (móvil) ─── */
+  .lectura-marco {
+    display: grid;
+    grid-template-columns: 390px 300px;
+    gap: var(--esp-6);
+    justify-content: center;
+    align-items: start;
+  }
+  .telefono {
+    border: var(--border);
+    border-radius: 2.2rem;
+    background: var(--paper-deep);
+    padding: var(--esp-4) var(--esp-3) var(--esp-5);
+    box-shadow: var(--shadow-sticker);
+  }
+  .telefono > p.panorama { text-align: center; font-size: .75rem; color: var(--ink-soft); font-weight: 700; margin: 0 0 var(--esp-3); }
+  .pantalla-lectura {
+    background: var(--paper);
+    border: var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .barra-lectura {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--esp-2);
+    background: var(--paper-deep);
+    border-bottom: var(--border);
+    padding: var(--esp-3) var(--esp-4);
+    align-items: center;
+  }
+  .barra-lectura h3 { margin: 0; font-family: var(--font-display); font-weight: 900; font-size: 1rem; }
+  .barra-lectura .lengua {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    background: var(--sky-bg);
+    border: 2px solid var(--sky);
+    color: #2A6B99;
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  .progreso-franja {
+    height: 8px;
+    background: var(--paper-deep);
+    border-bottom: var(--border);
+  }
+  .progreso-franja span { display: block; height: 100%; width: 33%; background: var(--sun); border-right: 2px solid var(--ink); }
+  .cuerpo-lectura { padding: var(--esp-5) var(--esp-4); display: grid; gap: var(--esp-3); }
+  .parrafo { font-size: 1.02rem; padding: var(--esp-3); border-radius: 10px; }
+  .parrafo.curso {
+    background: var(--paper-deep);
+    border-left: 4px solid var(--sun);
+    border-radius: 4px 10px 10px 4px;
+  }
+  .palabra-activa { text-decoration: underline; text-decoration-color: var(--coral); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  .controles-voz {
+    display: grid;
+    grid-template-columns: repeat(3, 48px) 1fr;
+    gap: var(--esp-2);
+    align-items: center;
+    padding: var(--esp-3) var(--esp-4);
+    border-top: var(--border);
+    background: var(--paper-deep);
+  }
+  .controles-voz button {
+    width: 48px; height: 48px;
+    display: inline-grid;
+    place-items: center;
+    background: var(--paper);
+    border: var(--border);
+    border-radius: 12px;
+    font-size: 1.05rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sticker-sm);
+  }
+  .controles-voz .play { background: var(--sun); width: 48px; }
+  .controles-voz .velocidad { display: grid; gap: 2px; font-size: .68rem; font-weight: 700; color: var(--ink-soft); text-align: center; }
+  .controles-voz input[type="range"] { width: 100%; accent-color: var(--coral); }
+
+  .notas-lectura { display: grid; gap: var(--esp-3); font-size: .88rem; color: var(--ink-soft); }
+  .notas-lectura li::marker { color: var(--coral); }
+  .notas-lectura strong { color: var(--ink); }
+
+  /* ─── 3 · Acceso ─── */
+  .acceso-marco {
+    display: grid;
+    grid-template-columns: minmax(280px, 340px) minmax(260px, 320px);
+    gap: var(--esp-6);
+    justify-content: center;
+  }
+  .tarjeta-form {
+    background: #fff;
+    border: var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sticker);
+    padding: var(--esp-6) var(--esp-5);
+  }
+  .tarjeta-form h3 { margin: 0 0 var(--esp-2); font-family: var(--font-display); font-weight: 900; font-size: 1.35rem; }
+  .tarjeta-form .subida { margin: 0 0 var(--esp-5); color: var(--ink-soft); font-size: .9rem; }
+  .tarjeta-form .rodear { font-size: .85rem; margin: var(--esp-4) 0 0; }
+  .tarjeta-form a { color: var(--coral-deep); font-weight: 700; }
+  .patron-mensajes h3 { margin: 0 0 var(--esp-3); font-family: var(--font-display); font-size: 1.05rem; }
+  .patron-mensajes p { font-size: .85rem; color: var(--ink-soft); margin: 0 0 var(--esp-3); }
+
+  /* ─── Footer de tokens ─── */
+  .tokens {
+    max-width: 1180px;
+    margin: var(--esp-6) auto 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--esp-3);
+    align-items: center;
+  }
+  .tokens figure { margin: 0; display: grid; gap: 4px; font-size: .72rem; font-weight: 700; text-align: center; }
+  .tokens i { display: block; width: 44px; height: 44px; border: var(--border); border-radius: 10px; box-shadow: var(--shadow-sticker-sm); }
+  .tokens small { color: var(--ink-soft); font-weight: 500; }
+
+  @media (max-width: 900px) {
+    .biblioteca-grid, .lectura-marco, .acceso-marco { grid-template-columns: 1fr; }
+    .lona { padding: var(--esp-4); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sticker, .sticker:hover, .mock-pestanas button, .mock-pestanas button:hover, .lomo, .lomo:hover { transform: none; transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="mock-cabecera">
+  <h1 class="mock-titulo">Propuesta «Cuaderno vivo, con la voz a bordo»
+    <small>Mockup estático · docs/PROPUESTA-DISENO.md · sin dependencias, CSS inline, respeta prefers-reduced-motion</small>
+  </h1>
+  <nav class="mock-pestanas" role="tablist" aria-label="Pantallas del mockup">
+    <button id="tab-biblioteca" role="tab" aria-selected="true" aria-controls="panel-biblioteca">Biblioteca</button>
+    <button id="tab-lector" role="tab" aria-selected="false" aria-controls="panel-lector">Lector</button>
+    <button id="tab-acceso" role="tab" aria-selected="false" aria-controls="panel-acceso">Acceso</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ─────────── 1 · BIBLIOTECA (escritorio) ─────────── -->
+  <section class="lona activa" id="panel-biblioteca" role="tabpanel" aria-labelledby="tab-biblioteca">
+    <h2>Mi biblioteca: la repisa</h2>
+    <p class="nota">Cada libro es un lomo (título en Fraunces, franja del color del idioma de aprendizaje, esquina doblada).
+    La marca del idioma sustituye al chip genérico «Se lee en EN». El lomo del libro en curso lleva cinta de progreso
+    (páginas aprobadas / total). El CTA «Crear libro» es un sticker sol con esquina doblada.</p>
+
+    <div class="biblioteca-grid">
+      <div>
+        <div class="barra-app">
+          <span class="logo-marca"><i class="logo-sello" aria-hidden="true">M</i> MySchoolMyParents</span>
+          <span class="sticker papel" style="font-size:.85rem; padding: 8px 14px;">Familia Lectora · <b>Salir</b></span>
+        </div>
+
+        <div class="estante" aria-label="Repisa de libros">
+          <button class="lomo" type="button">
+            <span class="franja-idioma" style="background: var(--sky);">EN · Inglés</span>
+            <h3>El Principito</h3>
+            <span class="meta">7/9 páginas · <b>leyendo</b></span>
+            <span class="cinta-progreso" role="img" aria-label="Progreso: 7 de 9 páginas"><span style="width: 78%"></span></span>
+          </button>
+          <button class="lomo" type="button">
+            <span class="franja-idioma" style="background: var(--sky-bg);">EN · Inglés</span>
+            <h3>The Very Hungry Caterpillar</h3>
+            <span class="meta">4/4 páginas</span>
+            <span class="cinta-progreso"><span style="width: 100%"></span></span>
+          </button>
+          <button class="lomo" type="button">
+            <span class="franja-idioma" style="background: var(--sky-bg);">EN · Inglés</span>
+            <h3>Carta para la abuela</h3>
+            <span class="meta">2/9 páginas</span>
+            <span class="cinta-progreso"><span style="width: 22%"></span></span>
+          </button>
+          <div class="lomo vacio" aria-hidden="true">
+            <h3>Próximo libro…</h3>
+            <span class="meta">Toca «Crear libro»</span>
+          </div>
+        </div>
+
+        <div class="estado-vacio-demo" style="margin-top: var(--esp-6); max-width: 420px;">
+          <svg width="96" height="72" viewBox="0 0 96 72" aria-hidden="true">
+            <rect x="10" y="26" width="44" height="40" rx="5" fill="#fff" stroke="#262134" stroke-width="2.5"/>
+            <path d="M10 26 l10 -12 h34 l10 12" fill="var(--paper-deep)" stroke="#262134" stroke-width="2.5" stroke-linejoin="round"/>
+            <rect x="42" y="40" width="42" height="26" rx="4" fill="var(--sun)" stroke="#262134" stroke-width="2.5"/>
+            <path d="M42 40 h34 l8 8 v18 h-42 z" fill="var(--sun)" stroke="#262134" stroke-width="2.5" stroke-linejoin="round"/>
+          </svg>
+          <strong>Aún no hay libros: toma una foto de la página.</strong>
+          <p style="margin: 8px 0 0;"><span class="sticker sol">📷 Toma una foto</span></p>
+        </div>
+      </div>
+
+      <aside class="panel-lateral">
+        <button class="sticker sol boton-flotante esquina-doblada" type="button"><b>＋ Crear libro</b></button>
+        <p class="synton"><strong>Jerarquía:</strong> el punto de entrada de la app vive en el estante como sticker sol,
+        no en la barra superior. Hoja nunca es botón primario; coral solo en pantallas de cuenta.</p>
+        <p class="synton"><strong>Estado vacío:</strong> ilustración SVG propia (sin CDN) + la acción clara;
+        nada de «Parece que aquí no hay nada todavía».</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ─────────── 2 · LECTOR (móvil) ─────────── -->
+  <section class="lona" id="panel-lector" role="tabpanel" aria-labelledby="tab-lector">
+    <h2>Lector: la línea por la que vas</h2>
+    <p class="nota">Barra fina con título, idioma de lectura, progreso de párrafo y controles de 48×48.
+    El párrafo en curso se separa por fondo papel-deep + borde izquierdo sol; la palabra activa lleva
+    subrayado coral de 3px (aporta señal además del color, para el daltonismo). Play nunca es autoplay.</p>
+
+    <div class="lectura-marco">
+      <div class="telefono">
+        <p class="panorama">iPhone · 390 pt</p>
+        <div class="pantalla-lectura">
+          <div class="barra-lectura">
+            <h3>El Principito</h3>
+            <span class="lengua">EN</span>
+            <span class="lengua" style="border-color: var(--ink); background: var(--paper); color: var(--ink);">3/9 párrafos</span>
+          </div>
+          <div class="progreso-franja" role="img" aria-label="Párrafo 3 de 9"><span></span></div>
+          <div class="cuerpo-lectura">
+            <p class="parrafo curso">When I was six, I once <span class="palabra-activa">saw</span> a magnificent
+            picture in a book about the primeval forest.</p>
+            <p class="parrafo" style="color: var(--ink-soft);">It was called the story of boa constrictors,
+            and how they swallow their prey whole.</p>
+          </div>
+          <div class="controles-voz">
+            <button type="button" aria-label="Párrafo anterior">⏮</button>
+            <button type="button" class="play" aria-label="Pausar">⏸</button>
+            <button type="button" aria-label="Párrafo siguiente">⏭</button>
+            <span class="velocidad">
+              <input type="range" min="0.5" max="1.5" step="0.1" value="1" aria-label="Velocidad de la voz">
+              ×1.0
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <ul class="notas-lectura">
+        <li><strong>Estado:</strong> el botón principal cambia etiqueta «Escuchar todo ↔ Pausar» sin cambiar de
+        tamaño: el layout no salta.</li>
+        <li><strong>Contraste de señal:</strong> párrafo por fondo + borde sol; palabra activa por subrayado coral.
+        Ni el fondo ni el subrayado dependen del otro.</li>
+        <li><strong>Control de velocidad</strong> visible y accesible; la app móvil ya usa
+        <code>@react-native-community/slider</code>: la web comparte el mismo diseño de control.</li>
+        <li><strong>Título, idioma y «3/9»</strong> en una sola barra: dónde se lee se entiende sin hablar de párrafo
+        «activo de voz».</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ─────────── 3 · ACCESO ─────────── -->
+  <section class="lona" id="panel-acceso" role="tabpanel" aria-labelledby="tab-acceso">
+    <h2>Acceso: mensajes que siempre son iguales</h2>
+    <p class="nota">Acento coral en pantallas de cuenta (entrar, crear cuenta, eliminar). Los cuatro estados de
+    formulario (reposo → carga → error → éxito) usan siempre las mismas piezas en cualquier pantalla.</p>
+
+    <div class="acceso-marco">
+      <form class="tarjeta-form" aria-label="Iniciar sesión (ejemplo)">
+        <h3>Iniciar sesión</h3>
+        <p class="subida">Del papel de la escuela a la voz de casa.</p>
+
+        <div class="campo">
+          <label for="mi-correo">Correo electrónico</label>
+          <input id="mi-correo" type="email" maxlength="254" autocomplete="email">
+          <p class="msg-error" role="alert">⚠️ Las credenciales no son correctas. Vuelve a intentarlo.</p>
+        </div>
+
+        <div class="campo">
+          <label for="mi-pass">Contraseña</label>
+          <input id="mi-pass" type="password" maxlength="128"
+                 value="BqmqazwJowBkVhqLkMdbiyQFkAUDeuWjXfzusrwqIsDSuiqErcwsUmtkOcabwsrHWBqmqazwJowBkVhqLkMdbiyQFkOWZf">
+          <p class="msg-recorte">El texto pegado se recorta a 128 caracteres.</p>
+          <p class="ayuda">Mostrar · Recupérala</p>
+        </div>
+
+        <button class="sticker coral" type="button" style="width: 100%; justify-content: center;">Entrar</button>
+        <p class="rodear">¿No tienes cuenta? <a href="#">Crearte una</a></p>
+      </form>
+
+      <aside class="patron-mensajes">
+        <h3>Patrón único de mensajes</h3>
+        <p>Derecha: los estados tal como se ven — no cambia de forma entre pantallas.</p>
+        <p class="msg-error">⚠️ Error: bajo el campo que lo causa, borde coral-deep, texto breve con acción.</p>
+        <p class="msg-exito">✅ Éxito: sticker hoja con icono, la misma forma en biblioteca, cuenta y OCR.</p>
+        <p class="msg-recorte-demo">✏️ Recorte (§6.3): aviso coral-deep bajo el campo, en la misma posición que el error.</p>
+        <p><strong>Carga:</strong> spinner <em>dentro</em> del botón + disabled, sin cambiar el tamaño del botón.</p>
+      </aside>
+    </div>
+  </section>
+
+</main>
+
+<footer class="tokens" aria-label="Tokens del sistema">
+  <figure><i style="background: var(--paper)"></i>paper<small>#FFFEF9</small></figure>
+  <figure><i style="background: var(--paper-deep)"></i>paper-deep<small>#FFF8EC</small></figure>
+  <figure><i style="background: var(--ink)"></i>ink<small>#262134</small></figure>
+  <figure><i style="background: var(--sun)"></i>sun<small>#FFC52E</small></figure>
+  <figure><i style="background: var(--coral)"></i>coral<small>#FF7A59</small></figure>
+  <figure><i style="background: var(--coral-deep)"></i>coral-deep<small>#C2452A</small></figure>
+  <figure><i style="background: var(--leaf)"></i>leaf<small>#3FA37C</small></figure>
+  <figure><i style="background: var(--sky)"></i>sky<small>#7DBBE6</small></figure>
+</footer>
+
+<script>
+  const pestanas = document.querySelectorAll('.mock-pestanas [role="tab"]');
+  function muestra(ide) {
+    document.querySelectorAll('.lona').forEach((l) => {
+      l.hidden = l.id !== `panel-${ide}`;
+      l.classList.toggle('activa', !l.hidden);
+    });
+    pestanas.forEach((t) => t.setAttribute('aria-selected', String(t.id === `tab-${ide}`)));
+  }
+  pestanas.forEach((t) => t.addEventListener('click', () => muestra(t.id.replace('tab-', ''))));
+</script>
+
+</body>
+</html>
