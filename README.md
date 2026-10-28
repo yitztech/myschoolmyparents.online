@@ -18,7 +18,7 @@ e2e/          Pruebas end-to-end (Playwright), paquete npm aparte
 .github/workflows/
   ci.yml             web (build + lint + escenarios E2E), móvil (tipos + pruebas) y seguridad (gitleaks + audits), según lo que cambie
   codeql.yml         análisis de código (JS/TS) en cada PR y semanal contra main
-  security-weekly.yml Trivy (dependencias y secretos) + ZAP baseline contra el stack, cada semana
+  security-nightly.yml Trivy (dependencias y secretos) + ZAP baseline contra las imágenes de producción, cada noche
   mobile.yml         OTA (EAS Update) o build de tienda cuando cambia apps/mobile en main
   mobile-release.yml instaladores directos (APK firmado + IPA sin firmar) en GitHub Releases, a mano
 scripts/             versión móvil, impacto OTA/tienda y publicación de APK

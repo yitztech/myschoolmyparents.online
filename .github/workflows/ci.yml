@@ -32,6 +32,7 @@ jobs:
               - 'apps/frontend/**'
               - 'infra/**'
               - 'e2e/**'
+              - 'tests/security/**'
               - 'docker-compose*.yml'
             mobile:
               - 'apps/mobile/**'
@@ -105,12 +106,19 @@ jobs:
       - run: npx playwright install chromium webkit --with-deps
         working-directory: e2e
       - run: npm test --prefix e2e
+      # ZAP pasivo contra las imágenes de producción (AUDITORIA SEG-08 de la plataforma): falla con
+      # cualquier aviso nuevo; las excepciones, con su motivo, en tests/security/zap-reglas.tsv
+      - name: ZAP baseline (imágenes de producción)
+        timeout-minutes: 10
+        run: tests/security/zap.sh
       - name: Evidencias de lo que falla
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: qa-evidence
-          path: e2e/test-results/
+          path: |
+            e2e/test-results/
+            zap/zap.html
           retention-days: 14
 
   security:
