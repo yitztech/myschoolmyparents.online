@@ -5,9 +5,12 @@ import { db, deleteBookCascade } from '../lib/db';
 import { HOME_LOCALES, LEARNING_LOCALES, uid, type Book } from '../lib/types';
 import { downloadLibraryBackup, restoreLibraryBackup } from '../lib/backup';
 import { synchronizeLibraryWithCloud } from '../lib/sync';
+import { BOOK_TITLE_MAX_LENGTH } from '../lib/validators';
 import { useI18n } from '../i18n/I18nContext';
+import { interp } from '../i18n/I18nContext';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { AvisoRecorte, pasteLimit } from './PasteLimit';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +32,8 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
   const books = useLiveQuery(() => db.books.orderBy('updatedAt').reverse().toArray(), [], undefined);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
+  /** Último pegado recortado en el título (§6.3). */
+  const [recortado, setRecortado] = useState<'' | 'titulo'>('');
   const [home, setHome] = useState('es-MX');
   const [learn, setLearn] = useState('en-US');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -160,7 +165,10 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder={t.library.bookTitlePlaceholder}
+                    maxLength={BOOK_TITLE_MAX_LENGTH}
+                    onPaste={pasteLimit(BOOK_TITLE_MAX_LENGTH, () => setRecortado('titulo'))}
                   />
+                  <AvisoRecorte activo={recortado === 'titulo'} texto={interp(t.auth.pasteTruncated, { n: BOOK_TITLE_MAX_LENGTH })} />
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>

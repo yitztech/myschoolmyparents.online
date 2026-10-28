@@ -8,6 +8,8 @@ import { Button } from '../ui/button';
 import { Input, Label } from '../ui/input';
 import { AuthLayout } from './AuthLayout';
 import { GoogleButton } from './GoogleButton';
+import { AvisoRecorte, pasteLimit } from '../PasteLimit';
+import { interp } from '../../i18n/I18nContext';
 import type { AuthView } from './AuthNavigator';
 
 export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void }) {
@@ -18,6 +20,7 @@ export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void 
   const [show, setShow] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [recortado, setRecortado] = useState<'correo' | 'password' | ''>('');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,18 +53,22 @@ export function LoginScreen({ onNavigate }: { onNavigate: (v: AuthView) => void 
         <div>
           <Label htmlFor="login-email">{t.auth.email}</Label>
           <Input
-            id="login-email" type="email" autoComplete="email" placeholder={t.auth.emailPlaceholder}
+            id="login-email" type="email" autoComplete="email" placeholder={t.auth.emailPlaceholder} maxLength={180}
             value={email} onChange={(e) => setEmail(e.target.value)}
+            onPaste={pasteLimit(180, () => setRecortado('correo'))}
           />
+          <AvisoRecorte activo={recortado === 'correo'} texto={interp(t.auth.pasteTruncated, { n: 180 })} />
         </div>
         <div>
           <Label htmlFor="login-password">{t.auth.password}</Label>
           <div className="relative">
             <Input
-              id="login-password" type={show ? 'text' : 'password'} autoComplete="current-password"
+              id="login-password" type={show ? 'text' : 'password'} autoComplete="current-password" maxLength={128}
               placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)}
               className="pr-14"
+              onPaste={pasteLimit(128, () => setRecortado('password'))}
             />
+            <AvisoRecorte activo={recortado === 'password'} texto={interp(t.auth.pasteTruncated, { n: 128 })} />
             <button
               type="button" onClick={() => setShow((s) => !s)}
               className="absolute right-1 top-1/2 flex min-h-[48px] min-w-[48px] -translate-y-1/2 items-center justify-center rounded-lg text-ink-soft hover:bg-paper-deep"
