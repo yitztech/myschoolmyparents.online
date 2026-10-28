@@ -74,6 +74,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
+      # Registro de errores en Bugsink de la plataforma (vacío = apagado; AUDITORIA INT-07)
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
       # La conexión se arma en el backend a partir de las piezas, con la
       # contraseña codificada: una URL escrita aquí se rompería si la
       # contraseña generada lleva caracteres como / @ :
@@ -142,6 +145,8 @@ services:
       # terceros (ver infra/nginx/16-analytics.sh).
       UMAMI_SCRIPT_URL: ${UMAMI_SCRIPT_URL:-}
       UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+      # Registro de errores: con valor, la CSP permite conectar con Bugsink (SDK del navegador)
+      SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
       backend:
         condition: service_healthy

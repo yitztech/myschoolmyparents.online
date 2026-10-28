@@ -1,5 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
-import { FastifyReply } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { reportError } from '../../observability/sentry';
 
 /**
  * Da forma estable a los errores para el frontend:
@@ -16,6 +17,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
+      if (status >= 500) reportError(exception, requestId(ctx.getRequest<FastifyRequest>()));
       const body = exception.getResponse() as { message?: string | string[]; error?: string };
       const rawMessage = Array.isArray(body?.message) ? body.message.join(' ') : (body?.message ?? exception.message);
       const error =
@@ -64,9 +66,16 @@ export class ApiExceptionFilter implements ExceptionFilter {
     }
 
     this.logger.error(`Error no controlado: ${(exception as Error)?.message}`, (exception as Error)?.stack);
+    reportError(exception, requestId(ctx.getRequest<FastifyRequest>()));
     reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
       error: 'internal',
       message: 'Error interno del servidor.',
     });
   }
+}
+
+/** El id que puso pino-http (X-Request-Id validado o uno nuevo), para cruzar Bugsink con los logs */
+function requestId(request: FastifyRequest | undefined): string | undefined {
+  const id = (request?.raw as { id?: unknown } | undefined)?.id ?? request?.id;
+  return typeof id === 'string' ? id : undefined;
 }

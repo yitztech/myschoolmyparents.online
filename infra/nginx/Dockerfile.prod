@@ -13,8 +13,12 @@ COPY apps/frontend/ ./
 COPY apps/mobile/app.json /mobile/app.json
 ARG VITE_AUTH_API_URL=""
 ARG VITE_GOOGLE_CLIENT_ID=""
+# Registro de errores (AUDITORIA INT-07): DSN pública de la variable SENTRY_DSN; vacía = apagado
+ARG VITE_SENTRY_DSN=""
+ARG RELEASE_SHA=dev
 ENV VITE_AUTH_API_URL=$VITE_AUTH_API_URL
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN VITE_RELEASE_SHA=$RELEASE_SHA
 RUN npm run build && find /app/dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.svg' -o -name '*.json' \) -exec gzip -k -9 {} +
 
 FROM nginx:1.31-alpine
