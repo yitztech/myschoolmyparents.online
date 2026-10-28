@@ -9,6 +9,8 @@ import { Input, Label } from '../ui/input';
 import { AuthLayout } from './AuthLayout';
 import { GoogleButton } from './GoogleButton';
 import { PasswordChecklist } from './PasswordChecklist';
+import { AvisoRecorte, pasteLimit } from '../PasteLimit';
+import { interp } from '../../i18n/I18nContext';
 import type { AuthView } from './AuthNavigator';
 
 export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => void }) {
@@ -21,6 +23,8 @@ export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => vo
   const [show, setShow] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  /** Último campo cuyo pegado se recortó (§6.3: se avisa, no se recorta en silencio). */
+  const [recortado, setRecortado] = useState<'nombre' | 'correo' | 'password' | 'confirm' | ''>('');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,11 +64,13 @@ export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => vo
       <form onSubmit={submit} className="grid gap-4" noValidate>
         <div>
           <Label htmlFor="reg-name">{t.auth.name}</Label>
-          <Input id="reg-name" autoComplete="name" placeholder={t.auth.namePlaceholder} maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />
+          <Input id="reg-name" autoComplete="name" placeholder={t.auth.namePlaceholder} maxLength={120} value={name} onChange={(e) => setName(e.target.value)} onPaste={pasteLimit(120, () => setRecortado('nombre'))} />
+          <AvisoRecorte activo={recortado === 'nombre'} texto={interp(t.auth.pasteTruncated, { n: 120 })} />
         </div>
         <div>
           <Label htmlFor="reg-email">{t.auth.email}</Label>
-          <Input id="reg-email" type="email" autoComplete="email" placeholder={t.auth.emailPlaceholder} maxLength={180} value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input id="reg-email" type="email" autoComplete="email" placeholder={t.auth.emailPlaceholder} maxLength={180} value={email} onChange={(e) => setEmail(e.target.value)} onPaste={pasteLimit(180, () => setRecortado('correo'))} />
+          <AvisoRecorte activo={recortado === 'correo'} texto={interp(t.auth.pasteTruncated, { n: 180 })} />
         </div>
         <div>
           <Label htmlFor="reg-password">{t.auth.password}</Label>
@@ -72,6 +78,7 @@ export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => vo
             <Input
               id="reg-password" type={show ? 'text' : 'password'} autoComplete="new-password"
               placeholder={t.auth.passwordPlaceholder} maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} className="pr-14"
+              onPaste={pasteLimit(128, () => setRecortado('password'))}
             />
 
             <button
@@ -83,14 +90,17 @@ export function RegisterScreen({ onNavigate }: { onNavigate: (v: AuthView) => vo
             </button>
           </div>
           <div className="mt-2"><PasswordChecklist password={password} /></div>
+          <AvisoRecorte activo={recortado === 'password'} texto={interp(t.auth.pasteTruncated, { n: 128 })} />
         </div>
         <div>
           <Label htmlFor="reg-confirm">{t.auth.confirmPassword}</Label>
           <Input
             id="reg-confirm" type={show ? 'text' : 'password'} autoComplete="new-password"
-            placeholder={t.auth.confirmPlaceholder} value={confirm} onChange={(e) => setConfirm(e.target.value)}
+            placeholder={t.auth.confirmPlaceholder} maxLength={128} value={confirm} onChange={(e) => setConfirm(e.target.value)}
+            onPaste={pasteLimit(128, () => setRecortado('confirm'))}
             aria-invalid={confirm.length > 0 && confirm !== password}
           />
+          <AvisoRecorte activo={recortado === 'confirm'} texto={interp(t.auth.pasteTruncated, { n: 128 })} />
           {confirm.length > 0 && confirm !== password && (
             <p role="alert" className="mt-1 text-sm font-bold text-coral-deep">{t.auth.passwordMismatch}</p>
           )}

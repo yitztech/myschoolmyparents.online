@@ -18,6 +18,7 @@ import { RouteConfig } from '@nestjs/platform-fastify';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { PinoLogger } from 'nestjs-pino';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { AUTH_RATE_LIMIT_MAX } from '../config/configuration';
 import type { User } from '../users/user.entity';
 import { AuthService } from './auth.service';
 import { DeleteAccountDto } from './dto/delete-account.dto';
@@ -31,9 +32,10 @@ import { GoogleOAuthError, GoogleOAuthService, type OAuthTicket } from './google
  * Tope por IP y ruta para las operaciones de cuenta, muy por debajo del
  * global (200/min): cada una gasta un bcrypt y, sin esto, una sola IP podía
  * probar contraseñas contra 200 cuentas por minuto. Sustituye al global en
- * estas rutas (no se suma).
+ * estas rutas (no se suma). En producción vale el 20 por defecto; los
+ * entornos de pruebas lo suben con AUTH_RATE_LIMIT_MAX.
  */
-const AUTH_RATE_LIMIT = { rateLimit: { max: 20, timeWindow: '1 minute' } };
+const AUTH_RATE_LIMIT = { rateLimit: { max: AUTH_RATE_LIMIT_MAX, timeWindow: '1 minute' } };
 
 /** Cookie que acompaña al navegador en la ida y vuelta a Google. */
 const OAUTH_COOKIE = 'msm_oauth';

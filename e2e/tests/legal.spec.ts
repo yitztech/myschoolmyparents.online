@@ -33,10 +33,18 @@ test.describe('Legal y descargas', () => {
     await page.goto('/descargas');
     await expect(page.getByRole('heading', { level: 1, name: /Descarga/ })).toBeVisible();
     for (const plataforma of ['android', 'ios']) {
-      const enlace = page.locator(`a[href="/descargas/${plataforma}"]`);
+      // El enlace lleva a la ruta interna /descargas/<plataforma> (el servidor elige
+      // el instalador) o, si ya se detectó el release, a su URL directa. Ambas son
+      // válidas: lo que se mide aquí es que cada clic se cuente con su atributo.
+      const enlace = page.locator(`a[data-umami-event-plataforma="${plataforma}"]`);
+      await expect(enlace).toHaveCount(1);
       await expect(enlace).toHaveAttribute('data-umami-event', 'descarga');
-      await expect(enlace).toHaveAttribute('data-umami-event-plataforma', plataforma);
       await expect(enlace).toHaveAttribute('data-umami-event-version', /^\d+\.\d+\.\d+\+\d+$/);
+      const href = await enlace.getAttribute('href');
+      const github = 'https://github.com/yitztech/myschoolmyparents.online/releases/download/';
+      expect(
+        href === `/descargas/${plataforma}` || (href?.startsWith(github) ?? false),
+      ).toBe(true);
     }
   });
 
@@ -67,7 +75,11 @@ test.describe('Legal y descargas', () => {
     page.once('dialog', (d) => d.accept());
     await page.getByLabel('Contraseña').fill(VALID_PASSWORD);
     await page.getByRole('button', { name: 'Eliminar mi cuenta' }).click();
-    await expect(page.getByRole('status')).toContainText('Tu cuenta se ha eliminado');
+    // Hay otro role="status" en la página: la región sr-only global de avisos
+    // (a11y-announcements). Se filtra por el mensaje, como en los pasos Gherkin.
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Tu cuenta se ha eliminado' }),
+    ).toBeVisible();
 
     const login = await request.post('/api/auth/login', { data: { email, password: VALID_PASSWORD } });
     expect(login.status()).toBe(401);

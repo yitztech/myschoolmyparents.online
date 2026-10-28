@@ -80,23 +80,70 @@ jobs:
         working-directory: apps/mobile
       - run: node --test scripts/test-mobile-scripts.mjs
 
+  # §40 de la plataforma: escenarios end-to-end contra el mismo compose que
+  # se prueba en local (`docker compose --env-file .env.example up -d`).
+  escenarios:
+    name: Escenarios · web end-to-end
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Levantar el stack (compose dev, valores de juguete de .env.example)
+        run: docker compose --env-file .env.example up -d --build
+      # --retry-all-errors: mientras los contenedores arrancan, el proxy de
+      # Docker acepta la conexión y la cierra (curl 56, «Connection reset»),
+      # y sin esta bandera el reintento no cubre ese caso.
+      - name: Esperar a que la web responda
+        run: curl -fsS --retry 60 --retry-delay 2 --retry-connrefused --retry-all-errors http://localhost:6060/api/health > /dev/null
+      - run: npm ci --prefix e2e --no-audit --no-fund
+      - run: npx playwright install chromium --with-deps
+        working-directory: e2e
+      - run: npm test --prefix e2e
+      - name: Evidencias de lo que falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-evidence
+          path: e2e/test-results/
+          retention-days: 14
+
   security:
-    name: Seguridad · auditoría y secretos
+    name: Seguridad · secretos y dependencias
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
+      # El binario OSS por imagen oficial: gitleaks-action@v2 exige clave de
+      # licencia para las organizaciones (gratuita solo para cuentas
+      # personales). Existe sin licencia y revisa el historial completo con
+      # fetch-depth: 0; sale distinto de 0 si encuentra algo.
+      - name: Secretos en el historial (gitleaks)
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            ghcr.io/gitleaks/gitleaks:latest detect -s .
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - name: Auditoría de dependencias
+      # Solo dependencias usadas en ejecución: los avisos de herramientas de
+      # build (vite, source-map-js…) no afectan al sitio publicado.
+      - name: Auditoría de dependencias de producción (bloquea en high+)
         run: |
-          npm audit --prefix apps/backend --audit-level=high || true
-          npm audit --prefix apps/frontend --audit-level=high || true
+          set -eu
+          npm audit --prefix apps/backend --omit=dev --audit-level=high
+          npm audit --prefix apps/frontend --omit=dev --audit-level=high
+          npm audit --prefix e2e --omit=dev --audit-level=high
+      # La app móvil (apps/mobile) se audita en informacional: sus avisos
+      # pendientes viven en dependencias transitivas del SDK de Expo (
+      # @expo/cli, @expo/config: solo build/CLI, no van al bundle) y el
+      # arreglo forzado exigiría degradar Expo 57 → 51, peor riesgo.
+      - name: Auditoría de la app móvil (informacional)
+        run: |
           npm audit --prefix apps/mobile --audit-level=high || true
 

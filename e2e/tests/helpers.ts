@@ -19,7 +19,7 @@ export function uniqueEmail(): string {
  * aria-label "Mostrar contraseña", así que sin `exact` el localizador casa
  * con dos elementos y Playwright falla por modo estricto.
  */
-export async function registerAccount(page: Page, email: string, name = 'Prueba E2E') {
+export async function registerAccount(page: Page, email: string, name = 'María Prueba') {
   await page.goto('/');
   await page.getByRole('button', { name: 'Regístrate' }).click();
   await page.getByRole('heading', { name: 'Crear cuenta' }).waitFor();
@@ -32,6 +32,6 @@ export async function registerAccount(page: Page, email: string, name = 'Prueba 
 }
 
 export async function logout(page: Page) {
-  await page.getByRole('button', { name: 'Cerrar sesión' }).click();
+  await page.getByRole('button', { name: 'Salir' }).click();
   await page.getByRole('heading', { name: 'Iniciar sesión' }).waitFor();
 }

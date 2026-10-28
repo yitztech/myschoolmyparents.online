@@ -67,3 +67,13 @@ export function useI18n(): I18nContextValue {
   }
   return ctx;
 }
+
+/**
+ * Sustituye `{variable}` en una frase completa del catálogo (§9.1 de la
+ * plataforma: frases completas con variables, nunca fragmentos concatenados).
+ */
+export function interp(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (_, key: string) =>
+    values[key] === undefined ? `{${key}}` : String(values[key]),
+  );
+}

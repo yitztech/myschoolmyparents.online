@@ -4,10 +4,11 @@
  * la app móvil, que tiene texto conocido.
  */
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { registerAccount, uniqueEmail } from './helpers';
 
-const SAMPLE_PAGE = resolve(__dirname, '../../apps/mobile/assets/sample/learning_page.png');
+const SAMPLE_PAGE = resolve(fileURLToPath(import.meta.url), '..', '..', '..', 'apps', 'mobile', 'assets', 'sample', 'learning_page.png');
 
 test('flujo principal: libro, OCR y lectura', async ({ page }) => {
   const errors: string[] = [];
@@ -22,7 +23,7 @@ test('flujo principal: libro, OCR y lectura', async ({ page }) => {
   await page.getByRole('heading', { name: /Sumar/ }).waitFor();
 
   await page.getByLabel('Elegir fotos').setInputFiles(SAMPLE_PAGE);
-  await page.getByRole('button', { name: /Importar 1 foto/ }).click();
+  await page.getByRole('button', { name: /Importar/ }).click();
 
   // El OCR pasa por el backend: aparece una tarjeta por revisar con el texto.
   const review = page.getByRole('region', { name: 'Pendientes por revisar' });

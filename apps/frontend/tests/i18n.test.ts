@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SUPPORTED_LOCALES, isSupportedLocale } from '../src/i18n/locales';
 import { TRANSLATIONS } from '../src/i18n/translations';
+import { interp } from '../src/i18n/I18nContext';
 import { lookupWord } from '../src/lib/dictionary';
 import { ocrLangForLocale } from '../src/lib/ocr';
 
@@ -43,6 +44,13 @@ test('i18n: valida correctamente los códigos de idioma soportados', () => {
   assert.equal(isSupportedLocale('fr'), true);
   assert.equal(isSupportedLocale('it'), false);
   assert.equal(isSupportedLocale(null), false);
+});
+
+test('interp: sustituye `{n}` en frases completas del catálogo (§9.1)', () => {
+  assert.equal(interp('El texto pegado se recorta a {n} caracteres.', { n: 120 }), 'El texto pegado se recorta a 120 caracteres.');
+  assert.equal(interp('Kürzten auf {n} Zeichen', { n: 128 }), 'Kürzten auf 128 Zeichen');
+  // Sin la variable: la plantilla se queda tal cual (fallo visible, no silencioso).
+  assert.equal(interp('A {n}', {}), 'A {n}');
 });
 
 test('dictionary: traduce palabras clave a los 5 idiomas soportados', () => {

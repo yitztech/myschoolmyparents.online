@@ -12,6 +12,19 @@ function databaseUrl(): string {
   return `postgres://${auth}@${DB_HOST}:${DB_PORT || '5432'}/${encodeURIComponent(DB_NAME)}`;
 }
 
+/**
+ * Entero de entorno o arranque fallido: un tope a medias no arranca.
+ */
+function envEntero(nombre: string, porDefecto: number, minimo = 1): number {
+  const bruto = (process.env[nombre] ?? '').trim();
+  if (!bruto) return porDefecto;
+  const valor = Number(bruto);
+  if (!Number.isInteger(valor) || valor < minimo) {
+    throw new Error(`${nombre} debe ser un entero ≥ ${minimo}; llegó a: "${bruto}".`);
+  }
+  return valor;
+}
+
 export default () => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '3001', 10),
@@ -53,3 +66,17 @@ export default () => ({
     ).trim(),
   },
 });
+
+/**
+ * Número entero o arranque fallido para las variables enteras
+ * opcionales de la app.
+ */
+export { envEntero };
+
+/**
+ * Tope por IP y minuto de las rutas de cuenta (§24 de la plataforma:
+ * límite de intentos). Por defecto 20, como hasta ahora; los entornos
+ * de pruebas automatizadas lo suben para crear muchas cuentas seguidas
+ * desde la misma IP (ver docker-compose.override.yml).
+ */
+export const AUTH_RATE_LIMIT_MAX = envEntero('AUTH_RATE_LIMIT_MAX', 20);

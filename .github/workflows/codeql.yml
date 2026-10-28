@@ -1,0 +1,55 @@
+# Análisis estático CodeQL (SAST) del código JS/TS del monorepo.
+#
+# §40 de la plataforma: el check «Seguridad» incluye CodeQL. En un repositorio
+# público es gratuito y corre en cada PR, en cada push a main y semanalmente.
+name: Seguridad · CodeQL
+
+on:
+  pull_request:
+    paths:
+      - 'apps/**/*.ts'
+      - 'apps/**/*.tsx'
+      - 'e2e/**/*.ts'
+      - 'scripts/**/*.mjs'
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 4 * * 1' # lunes 04:17 UTC
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analizar JavaScript y TypeScript
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          # Consultas por defecto + seguridad: alertas de OWASP, XSS,
+          # inyección, SSRF y similares sobre todo el monorepo.
+          # («security-extended»: sin él, solo las de Code Scanning por
+          # defecto; «queries: security» no existe y hace fallar el init.)
+          queries: security-extended
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      # Solo instalar lo que CodeQL necesita para entender los imports y el build.
+      - run: npm ci --prefix apps/backend --no-audit --no-fund || true
+      - run: npm ci --prefix apps/frontend --no-audit --no-fund || true
+      - run: npm run build --prefix apps/backend || true
+      - run: npm run build --prefix apps/frontend || true
+        env:
+          VITE_AUTH_API_URL: /api
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:javascript-typescript'

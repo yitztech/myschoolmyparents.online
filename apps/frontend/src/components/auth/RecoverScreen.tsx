@@ -8,6 +8,8 @@ import { Button } from '../ui/button';
 import { Input, Label } from '../ui/input';
 import { AuthLayout } from './AuthLayout';
 import { PasswordChecklist } from './PasswordChecklist';
+import { AvisoRecorte, pasteLimit } from '../PasteLimit';
+import { interp } from '../../i18n/I18nContext';
 import type { AuthView } from './AuthNavigator';
 
 type Step = 'email' | 'code' | 'done';
@@ -24,6 +26,7 @@ export function RecoverScreen({ onNavigate }: { onNavigate: (v: AuthView) => voi
   const [show, setShow] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [recortado, setRecortado] = useState<'correo' | 'password' | 'confirm' | ''>('');
 
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
@@ -76,7 +79,8 @@ export function RecoverScreen({ onNavigate }: { onNavigate: (v: AuthView) => voi
         <form onSubmit={sendCode} className="grid gap-4" noValidate>
           <div>
             <Label htmlFor="rec-email">{t.auth.email}</Label>
-            <Input id="rec-email" type="email" autoComplete="email" placeholder={t.auth.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input id="rec-email" type="email" autoComplete="email" placeholder={t.auth.emailPlaceholder} maxLength={180} value={email} onChange={(e) => setEmail(e.target.value)} onPaste={pasteLimit(180, () => setRecortado('correo'))} />
+            <AvisoRecorte activo={recortado === 'correo'} texto={interp(t.auth.pasteTruncated, { n: 180 })} />
           </div>
           {error && <p role="alert" className="rounded-xl border-2 border-coral-deep bg-[#FFE9E0] p-3 text-sm font-bold text-coral-deep">{error}</p>}
           <Button type="submit" variant="coral" className="w-full" disabled={busy}>{busy ? t.auth.sendingCode : t.auth.sendCode}</Button>
@@ -96,12 +100,12 @@ export function RecoverScreen({ onNavigate }: { onNavigate: (v: AuthView) => voi
           )}
           <div>
             <Label htmlFor="rec-code">{t.auth.codeLabel}</Label>
-            <Input id="rec-code" inputMode="numeric" autoComplete="one-time-code" placeholder="123456" value={code} onChange={(e) => setCode(e.target.value)} />
+            <Input id="rec-code" inputMode="numeric" autoComplete="one-time-code" placeholder="123456" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} />
           </div>
           <div>
             <Label htmlFor="rec-password">{t.auth.newPasswordLabel}</Label>
             <div className="relative">
-              <Input id="rec-password" type={show ? 'text' : 'password'} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="pr-14" />
+              <Input id="rec-password" type={show ? 'text' : 'password'} autoComplete="new-password" maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} className="pr-14" onPaste={pasteLimit(128, () => setRecortado('password'))} />
               <button
                 type="button" onClick={() => setShow((s) => !s)}
                 className="absolute right-1 top-1/2 flex min-h-[48px] min-w-[48px] -translate-y-1/2 items-center justify-center rounded-lg text-ink-soft hover:bg-paper-deep"
@@ -111,10 +115,12 @@ export function RecoverScreen({ onNavigate }: { onNavigate: (v: AuthView) => voi
               </button>
             </div>
             <div className="mt-2"><PasswordChecklist password={password} /></div>
+            <AvisoRecorte activo={recortado === 'password'} texto={interp(t.auth.pasteTruncated, { n: 128 })} />
           </div>
           <div>
             <Label htmlFor="rec-confirm">{t.auth.confirmNewPasswordLabel}</Label>
-            <Input id="rec-confirm" type={show ? 'text' : 'password'} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+            <Input id="rec-confirm" type={show ? 'text' : 'password'} autoComplete="new-password" maxLength={128} value={confirm} onChange={(e) => setConfirm(e.target.value)} onPaste={pasteLimit(128, () => setRecortado('confirm'))} />
+            <AvisoRecorte activo={recortado === 'confirm'} texto={interp(t.auth.pasteTruncated, { n: 128 })} />
           </div>
           {error && <p role="alert" className="rounded-xl border-2 border-coral-deep bg-[#FFE9E0] p-3 text-sm font-bold text-coral-deep">{error}</p>}
           <Button type="submit" variant="coral" className="w-full" disabled={busy}>{busy ? 'Guardando…' : t.auth.resetPassword}</Button>
