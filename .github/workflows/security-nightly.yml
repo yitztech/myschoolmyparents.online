@@ -1,0 +1,52 @@
+# Mantenimiento de seguridad cada noche (AUDITORIA SEG-08 de la plataforma): Trivy
+# (dependencias, config y secretos) y ZAP baseline (DAST pasivo) contra las imágenes de
+# producción levantadas en el runner, para ver avisos nuevos aunque no haya cambios.
+#
+# §39/§40 de la plataforma: nunca ZAP activo contra producción.
+name: Seguridad · nocturna
+
+on:
+  schedule:
+    - cron: '30 9 * * *' # cada día 09:30 UTC, escalonado con los demás proyectos
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trivy:
+    name: Trivy · repo
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          exit-code: '0' # reporta y sube el SARIF; el semáforo lo da CodeQL
+          format: sarif
+          output: trivy.sarif
+      - uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy.sarif
+
+  zap-baseline:
+    name: ZAP · baseline (pasivo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: ZAP baseline contra las imágenes de producción
+        timeout-minutes: 10
+        run: tests/security/zap.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: zap/zap.html
+          retention-days: 14

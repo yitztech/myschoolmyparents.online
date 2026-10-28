@@ -1,0 +1,4 @@
+10049	IGNORE	(index.html va con no-store a propósito para que una versión nueva se vea al momento; los assets con hash sí se cachean)
+10055	IGNORE	(style-src 'unsafe-inline': Radix inyecta estilos en línea (security-headers.conf); los scripts no admiten inline)
+10109	IGNORE	(Informativo: la web es una SPA)
+90004	IGNORE	(Sin COEP: bloquearía el acceso con Google y Umami; no se usa SharedArrayBuffer)
