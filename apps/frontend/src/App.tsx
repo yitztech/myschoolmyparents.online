@@ -81,13 +81,13 @@ function AppContent() {
         {t.nav.skipToContent}
       </a>
       <nav className="relative z-50 border-b-2 border-ink bg-paper/95 backdrop-blur" aria-label="Principal">
-        <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-[1100px] flex-wrap items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
           <a href="/" className="flex items-center gap-3 rounded-xl" aria-label="MySchoolMyParents Online, inicio">
             <div className="sticker flex h-10 w-10 -rotate-3 items-center justify-center rounded-xl bg-coral font-display text-xl font-black text-white" aria-hidden>
               M
             </div>
             <div className="leading-tight">
-              <span className="font-display text-lg font-black">
+              <span className="font-display text-base font-black sm:text-lg">
                 MySchoolMyParents <span className="marker">Online</span>
               </span>
               <p className="hidden text-xs font-medium text-ink-soft sm:block">{t.nav.tagline}</p>

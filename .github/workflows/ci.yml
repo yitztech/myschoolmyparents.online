@@ -102,7 +102,7 @@ jobs:
       - name: Esperar a que la web responda
         run: curl -fsS --retry 60 --retry-delay 2 --retry-connrefused --retry-all-errors http://localhost:6060/api/health > /dev/null
       - run: npm ci --prefix e2e --no-audit --no-fund
-      - run: npx playwright install chromium --with-deps
+      - run: npx playwright install chromium webkit --with-deps
         working-directory: e2e
       - run: npm test --prefix e2e
       - name: Evidencias de lo que falla

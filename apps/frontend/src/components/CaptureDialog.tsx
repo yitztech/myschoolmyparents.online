@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { db, nextOrderKey } from '../lib/db';
-import { processImage } from '../lib/images';
+import { bytesDe, processImage } from '../lib/images';
 import { kickQueue } from '../lib/queue';
 import { uid, splitParagraphs } from '../lib/types';
 import { useI18n } from '../i18n/I18nContext';
@@ -65,14 +65,23 @@ export function CaptureDialog({ bookId, onDone }: Props) {
         const pageId = uid('page');
         const origId = uid('blob');
         const derivId = uid('blob');
-        await db.blobs.add({ id: origId, blob: s.file, createdAt: now });
-        await db.blobs.add({ id: derivId, blob: processed, createdAt: now });
+        // En `db.blobs` se guardan bytes en crudo: ningún motor serializa
+        // blobs de forma fiable en IndexedDB (WebKit rechaza todos, incluso
+        // los de memoria).
+        const original = await bytesDe(s.file);
+        const derivado = await bytesDe(processed);
+        await db.blobs.add({ id: origId, ...original, createdAt: now });
+        await db.blobs.add({ id: derivId, ...derivado, createdAt: now });
         await db.pages.add({ id: pageId, bookId, orderKey, originalBlobId: origId, derivedBlobId: derivId, status: 'pending', createdAt: now, updatedAt: now });
         await db.jobs.add({ id: uid('job'), bookId, pageId, imageBlobId: derivId, state: 'queued', attempts: 0, createdAt: now, updatedAt: now });
         await db.books.update(bookId, { updatedAt: now });
         setProgress(`Leyendo una página… (${i + 1}/${total})`);
-      } catch {
-        errs.push(`${s.name}: no se pudo preparar (missing_image)`);
+      } catch (err) {
+        // El detalle real importa: sin él, cualquier fallo (canvas, IndexedDB,
+        // bitmap) aparece como «missing_image» y nadie puede diagnosticar.
+        const detalle = err instanceof Error ? err.message : String(err);
+        console.error('Importar: fallo al preparar la foto', err);
+        errs.push(`${s.name}: no se pudo preparar (${detalle})`);
       }
     }
     setErrors(errs);

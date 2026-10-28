@@ -48,7 +48,7 @@ export function AccessibilityToolbar() {
           onClick={cycleTheme}
           aria-label={`Contraste: ${themeLabel}. Pulsa para cambiar`}
           title={`Contraste: ${themeLabel}`}
-          className="font-bold min-h-[40px]"
+          className="min-h-[44px] font-bold"
         >
           <Eye className="h-4 w-4 mr-1 text-coral-deep" />
           <span className="text-xs">{themeLabel}</span>
@@ -63,7 +63,7 @@ export function AccessibilityToolbar() {
           disabled={fontSize <= 18}
           aria-label="Disminuir tamaño de letra"
           title="Disminuir tamaño de letra (-)"
-          className="h-9 w-9 p-0 font-bold"
+          className="h-11 w-11 p-0 font-bold"
         >
           A-
         </Button>
@@ -81,20 +81,20 @@ export function AccessibilityToolbar() {
           disabled={fontSize >= 60}
           aria-label="Aumentar tamaño de letra"
           title="Aumentar tamaño de letra (+)"
-          className="h-9 w-9 p-0 font-bold"
+          className="h-11 w-11 p-0 font-bold"
         >
           A+
         </Button>
       </div>
 
-      <div className="flex items-center gap-1 border-l-2 border-ink/20 pl-2">
+      <div className="flex flex-wrap items-center gap-1 border-l-2 border-ink/20 pl-2">
         <Button
           size="sm"
           variant={focusMode ? 'coral' : 'outline'}
           onClick={toggleFocusMode}
           aria-pressed={focusMode}
           aria-label={t.a11y.focusMode}
-          className="min-h-[40px] text-xs font-bold"
+          className="min-h-[44px] text-xs font-bold"
         >
           <Sparkles className="h-3.5 w-3.5 mr-1" />
           {focusMode ? 'Párrafo activo' : 'Modo Enfoque'}
@@ -106,7 +106,7 @@ export function AccessibilityToolbar() {
           onClick={toggleWideSpacing}
           aria-pressed={wideSpacing}
           aria-label="Espaciado amplio entre líneas y letras"
-          className="min-h-[40px] text-xs font-bold"
+          className="min-h-[44px] text-xs font-bold"
         >
           <Type className="h-3.5 w-3.5 mr-1" />
           Espaciado amplio
@@ -118,7 +118,7 @@ export function AccessibilityToolbar() {
           onClick={() => setShowHelp(!showHelp)}
           aria-expanded={showHelp}
           aria-label="Ayuda de atajos de teclado"
-          className="h-9 w-9 p-0"
+          className="h-11 w-11 p-0"
         >
           <HelpCircle className="h-4 w-4" />
         </Button>

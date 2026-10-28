@@ -284,6 +284,7 @@ export function Reader({ book, paragraphs }: Props) {
                 a11y.setFontSize(newSize);
                 void db.books.update(book.id, { fontSize: newSize, updatedAt: Date.now() });
               }}
+              className="min-w-0"
             />
             <span className="w-12 text-right text-xs font-black">{currentFontSize}pt</span>
           </div>
@@ -416,7 +417,7 @@ export function Reader({ book, paragraphs }: Props) {
                       variant="secondary"
                       onClick={() => speakOne(p)}
                       aria-label={`${t.reader.listenParagraph} ${idx + 1}`}
-                      className="min-h-[38px] font-bold"
+                      className="min-h-[44px] font-bold"
                     >
                       <Volume2 className="h-4 w-4 mr-1" /> {t.reader.listenParagraph}
                     </Button>
@@ -426,7 +427,7 @@ export function Reader({ book, paragraphs }: Props) {
                         variant="ghost"
                         onClick={() => speakOne(p)}
                         aria-label="Repetir párrafo"
-                        className="min-h-[38px]"
+                        className="min-h-[44px]"
                       >
                         <RotateCcw className="h-4 w-4 mr-1" /> Repetir
                       </Button>

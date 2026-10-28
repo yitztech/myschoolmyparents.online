@@ -31,5 +31,10 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'off',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', testIgnore: /movil-(android|ios)-web/, use: { ...devices['Desktop Chrome'] } },
+    // §38: los mismos escenarios que la web, con perfiles móviles emulados.
+    { name: 'movil-android', testMatch: /movil-android-web/, use: { ...devices['Pixel 7'], locale: 'es-ES' } },
+    { name: 'movil-ios', testMatch: /movil-ios-web/, use: { ...devices['iPhone 14'], locale: 'es-ES' } },
+  ],
 });

@@ -62,9 +62,18 @@ export interface PageDraft {
   createdAt: number;
 }
 
+/**
+ * Contenido binario de una imagen, guardado como bytes en crudo.
+ * No se guarda un `Blob`: el WebKit de Playwright (y algunos WebKit antiguos)
+ * no serializa ningún Blob para IndexedDB («Error preparing Blob/File data»),
+ * mientras que Uint8Array/ArrayBuffer funcionan en los tres motores. El `Blob`
+ * se reconstruye al leer con `blobDe()` de `db.ts`.
+ */
 export interface ImageBlob {
   id: string;
-  blob: Blob;
+  /** Bytes respaldados por un ArrayBuffer (lo que `BlobPart` exige). */
+  bytes: Uint8Array<ArrayBuffer>;
+  mime: string;
   createdAt: number;
 }
 

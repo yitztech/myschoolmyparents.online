@@ -105,11 +105,22 @@ export async function recoverQueue() {
   await db.jobs.where('state').equals('processing').modify({ state: 'queued', updatedAt: Date.now() });
 }
 
+/**
+ * Reconstruye el `Blob` de un registro de `db.blobs`. Los registros nuevos
+ * guardan `bytes` + `mime` (ningún motor serializa blobs de forma fiable en
+ * IndexedDB; WebKit los rechaza todos); los escritos antes de este cambio
+ * traían el campo `blob` y se leen igual.
+ */
+export function blobDe(rec: ImageBlob): Blob {
+  if (rec.bytes) return new Blob([rec.bytes], { type: rec.mime || 'application/octet-stream' });
+  return (rec as unknown as { blob: Blob }).blob;
+}
+
 export async function blobToUrl(id?: string): Promise<string | undefined> {
   if (!id) return undefined;
   const rec = await db.blobs.get(id);
   if (!rec) return undefined;
-  return URL.createObjectURL(rec.blob);
+  return URL.createObjectURL(blobDe(rec));
 }
 
 /**

@@ -9,7 +9,7 @@
     "test:gherkin": "playwright test tests/gherkin.spec.ts",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report",
-    "install-browsers": "playwright install chromium"
+    "install-browsers": "playwright install chromium webkit"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0"

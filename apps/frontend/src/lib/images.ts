@@ -5,6 +5,18 @@ import { db } from './db';
  * crop: 0.65..1 (fracción del lado menor centrada). rotation: 0|90|180|270
  * Optimizado a máx. 1600px en WebP (calidad 0.78) o JPEG (0.80) para reducir >85% de espacio.
  */
+/**
+ * Convierte cualquier `Blob`/`File` a bytes en crudo + tipo MIME, listo para
+ * `db.blobs`. WebKit (Safari/iOS) no serializa para IndexedDB ni un `File` ni
+ * ningún `Blob` —ni siquiera uno de memoria—: falla con «UnknownError: Error
+ * preparing Blob/File data to be stored in object store». Los
+ * `Uint8Array`/`ArrayBuffer` sí funcionan en los tres motores.
+ */
+export async function bytesDe(file: Blob): Promise<{ bytes: Uint8Array<ArrayBuffer>; mime: string }> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return { bytes, mime: file.type || 'application/octet-stream' };
+}
+
 export async function processImage(file: Blob, crop = 1, rotation: 0 | 90 | 180 | 270 = 0): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const cw = Math.min(1, Math.max(0.65, crop));

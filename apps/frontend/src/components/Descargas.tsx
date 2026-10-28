@@ -24,7 +24,7 @@ export function Descargas() {
         <p className="sticker inline-block -rotate-1 rounded-md bg-ink px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-paper">
           {t.downloads.badge}
         </p>
-        <h1 className="mt-2 break-words font-display text-[2rem] font-black leading-none sm:text-5xl">
+        <h1 className="mt-2 break-words font-display text-2xl font-black leading-none sm:text-5xl">
           {t.downloads.title} <span className="marker">{APP_NAME}</span>
         </h1>
         <p className="mt-3 max-w-[60ch] font-medium text-ink-soft">

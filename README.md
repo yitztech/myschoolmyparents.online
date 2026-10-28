@@ -414,11 +414,11 @@ que ya esté levantado.
 docker compose --env-file .env.dev up -d   # el stack debe estar arriba
 cd e2e
 npm install                                # solo la primera vez
-npm run install-browsers                   # descarga Chromium
+npm run install-browsers                   # descarga Chromium y WebKit (móvil)
 npm test
 ```
 
-56 tests, en dos capas:
+59 tests, en dos capas:
 
 **Especificación (Gherkin en español).** Los `.feature` de `e2e/features/` describen
 el sistema en lenguaje de negocio; los materializa `tests/gherkin.spec.ts` con un
@@ -450,6 +450,12 @@ runner mínimo propio (no playwright-bdd). Cada escenario → una prueba:
 - **API** (`tests/api.spec.ts`, sin navegador): que el OCR exija sesión y
   rechace lo que no sea una imagen, que la recuperación responda igual exista
   o no la cuenta, y que el `ValidationPipe` rechace campos fuera del contrato.
+- **Web en el móvil** (`tests/movil-ios-web.spec.ts` y
+  `tests/movil-android-web.spec.ts`, proyectos `movil-ios` y `movil-android`
+  de la configuración de Playwright): los mismos flujos que la web con
+  perfiles emulados en cada PR (§38). iPhone 14 (WebKit) recorre el flujo
+  completo con OCR; iPhone SE (320px) y Pixel 7 (Chromium) comprueban la
+  biblioteca: sin scroll horizontal y sin objetivo táctil menor de 44px.
 
 Dentro de la interfaz, el bloque *Invariantes de seguridad* vigila los arreglos hechos antes
 del despliegue: que el bundle no lleve el mock de localStorage, que la sesión
