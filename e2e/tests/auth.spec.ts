@@ -16,7 +16,7 @@ test.describe('Autenticación', () => {
   test('rechaza una contraseña que incumple la política', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Regístrate' }).click();
-    await page.getByLabel('Nombre').fill('Prueba E2E');
+    await page.getByLabel('Nombre').fill('María Prueba');
     await page.getByLabel('Correo electrónico').fill(uniqueEmail());
     await page.getByLabel('Contraseña', { exact: true }).fill('corta');
     await page.getByLabel('Confirmar contraseña').fill('corta');
