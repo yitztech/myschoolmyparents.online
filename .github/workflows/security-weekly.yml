@@ -1,0 +1,65 @@
+# Mantenimiento de seguridad semanal: Trivy (dependencias, config y secretos)
+# y ZAP baseline (DAST pasivo) contra el stack levantado en el runner.
+#
+# §39/§40 de la plataforma: nunca ZAP activo contra producción; aquí el
+# análisis va contra el compose de desarrollo montado en el propio runner.
+name: Seguridad · semanal
+
+on:
+  schedule:
+    - cron: '43 4 * * 1' # lunes 04:43 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trivy:
+    name: Trivy · repo
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          exit-code: '0' # reporta y sube el SARIF; el semáforo lo da CodeQL
+          format: sarif
+          output: trivy.sarif
+      - uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy.sarif
+
+  zap-baseline:
+    name: ZAP · baseline (pasivo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Levantar el stack de desarrollo
+        run: docker compose --env-file .env.example up -d --build
+      - name: Esperar a que la web responda
+        run: curl -fsS --retry 60 --retry-delay 2 --retry-connrefused http://localhost:6060/api/health > /dev/null
+      - name: ZAP baseline contra la web del runner
+        run: |
+          docker pull ghcr.io/zaproxy/zaproxy:stable
+          docker run --network host --rm \
+            -v "$PWD:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://localhost:6060 \
+            -c .zap/rules.tsv \
+            -r zap-report.html -I || true
+        # `-c` reglas ajustadas con su motivo (suite; §39). `-I` no baja la
+        # confianza: el informe queda como artifact y alguien lo revisa.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: zap-report.html
+          retention-days: 14

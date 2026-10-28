@@ -1,0 +1,10 @@
+# 10038 → Content Security Policy Header Not Set
+# nginx en producción sirve el CSP real; el compose de desarrollo del runner
+# no lleva cabeceras de prod, así que se ignora en este DAST con su motivo.
+10038	IGNORE	Content Security Policy Header Not Set: la CSP real la instala el nginx de producción (infra/nginx/security-headers.conf); el compose de desarrollo no la lleva.
+# 10020 → X-Frame-Options Header Not Set
+# Igual que la CSP: cabecera de producción, no del entorno de pruebas.
+10020	IGNORE	X-Frame-Options Header Not Set: igual que la CSP, es la imagen de producción quien la pone.
+# 10035 → Strict Transport Security Header Not Set
+# Traefik/Coolify termina TLS y redirige; aquí circular en HTTP es lo esperado.
+10035	IGNORE	Strict Transport Security Header Not Set: el TLS y el HSTS los termina el proxy del host (Traefik); en el runner se prueba sobre HTTP interno.
