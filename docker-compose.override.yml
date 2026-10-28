@@ -25,6 +25,10 @@ services:
       target: dev
     environment:
       NODE_ENV: development
+      # El e2e crea ~15 cuentas seguidas desde 127.0.0.1 y cada registro gasta
+      # una petición del límite de cuenta (20/min en producción): el entorno
+      # de pruebas lo sube, la producción ni se entera. Ver .env.example.
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-200}
     volumes:
       # Hot-reload: el código se monta sobre la imagen (node_modules queda
       # el horneado gracias al volumen anónimo). Solo lectura: el contenedor
