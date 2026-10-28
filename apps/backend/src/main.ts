@@ -1,3 +1,5 @@
+// Primero: Sentry se inicializa antes de cargar el resto de módulos
+import './observability/sentry';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';

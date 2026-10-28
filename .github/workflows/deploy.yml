@@ -39,6 +39,8 @@ jobs:
             context: apps/backend
             file: apps/backend/Dockerfile
             target: prod
+            build_args: |
+              RELEASE_SHA=${{ github.sha }}
           # Las VITE_* acaban dentro del bundle: no son secretos, van como
           # Variables del repositorio. VITE_AUTH_API_URL vacío activaría el
           # mock de auth (el build falla a propósito), así que por defecto /api.
@@ -50,6 +52,7 @@ jobs:
               RELEASE_SHA=${{ github.sha }}
               VITE_AUTH_API_URL=${{ vars.VITE_AUTH_API_URL || '/api' }}
               VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
+              VITE_SENTRY_DSN=${{ vars.SENTRY_DSN }}
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4

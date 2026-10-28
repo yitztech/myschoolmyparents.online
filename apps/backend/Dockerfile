@@ -30,7 +30,9 @@ RUN npm run build
 
 FROM node:24.21-alpine AS prod
 WORKDIR /app
-ENV NODE_ENV=production
+# Commit de la imagen: release de los errores en Bugsink (AUDITORIA INT-07)
+ARG RELEASE_SHA=dev
+ENV NODE_ENV=production RELEASE_SHA=$RELEASE_SHA
 COPY --chown=node:node package.json package-lock.json* ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force \
  && find node_modules -name "*.d.ts" -delete \

@@ -44,6 +44,21 @@ else
   echo "16-analytics.sh: sin UMAMI_SCRIPT_URL/UMAMI_WEBSITE_ID, sin analítica"
 fi
 
-# Origen extra para script-src (carga el script) y connect-src (envía las
-# visitas) de la CSP; vacío sin Umami. Ver security-headers.conf.
-printf 'map $host $analytics_src { default "%s"; }\n' "${origin:+ $origin}" > "$dir/analytics.conf"
+# Registro de errores (AUDITORIA INT-08): con SENTRY_DSN, la CSP permite conectar con el origen
+# de Bugsink, adonde el SDK del navegador manda los errores.
+errores=""
+if [ -n "${SENTRY_DSN:-}" ]; then
+  case "$SENTRY_DSN" in
+    https://*) ;;
+    *) echo "16-analytics.sh: SENTRY_DSN debe empezar por https://" >&2; exit 1 ;;
+  esac
+  # Sin la clave (lo que va antes de @) ni el proyecto: solo https://host
+  errores=$(printf '%s' "$SENTRY_DSN" | sed -E 's#^https://([^@/]*@)?([^/]+).*#https://\2#')
+fi
+
+# Orígenes extra de la CSP: Umami en script-src (carga el script) y connect-src (envía las
+# visitas); Bugsink solo en connect-src. Vacíos sin valores. Ver security-headers.conf.
+{
+  printf 'map $host $analytics_src { default "%s"; }\n' "${origin:+ $origin}"
+  printf 'map $host $errores_src { default "%s"; }\n' "${errores:+ $errores}"
+} > "$dir/analytics.conf"
