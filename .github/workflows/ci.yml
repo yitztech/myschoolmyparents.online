@@ -96,8 +96,11 @@ jobs:
           cache-dependency-path: e2e/package-lock.json
       - name: Levantar el stack (compose dev, valores de juguete de .env.example)
         run: docker compose --env-file .env.example up -d --build
+      # --retry-all-errors: mientras los contenedores arrancan, el proxy de
+      # Docker acepta la conexión y la cierra (curl 56, «Connection reset»),
+      # y sin esta bandera el reintento no cubre ese caso.
       - name: Esperar a que la web responda
-        run: curl -fsS --retry 60 --retry-delay 2 --retry-connrefused http://localhost:6060/api/health > /dev/null
+        run: curl -fsS --retry 60 --retry-delay 2 --retry-connrefused --retry-all-errors http://localhost:6060/api/health > /dev/null
       - run: npm ci --prefix e2e --no-audit --no-fund
       - run: npx playwright install chromium --with-deps
         working-directory: e2e
@@ -117,9 +120,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # El binario OSS por imagen oficial: gitleaks-action@v2 exige clave de
+      # licencia para las organizaciones (gratuita solo para cuentas
+      # personales). Existe sin licencia y revisa el historial completo con
+      # fetch-depth: 0; sale distinto de 0 si encuentra algo.
+      - name: Secretos en el historial (gitleaks)
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            ghcr.io/gitleaks/gitleaks:latest detect -s .
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
