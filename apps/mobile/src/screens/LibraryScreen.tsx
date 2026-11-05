@@ -6,31 +6,23 @@ import { AboutDialog } from '../components/AboutDialog';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcherModal';
 import { ActionMenu, AppText, Badge, Button, ConfirmDialog, Dialog, Icon, IconButton, OptionPicker, TextField } from '../components/ui';
 import { useToast } from '../components/Toast';
-import { useApp } from '../context/AppContext';
+import { useApp, useT } from '../context/AppContext';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import type { Book } from '../db/schema';
-import { MOBILE_STRINGS, type MobileLocale } from '../i18n';
 import { displayVersion } from '../lib/appVersion';
+import { validateBookTitle } from '../lib/validators';
 import { importBookFromFile, exportBookToFile, NO_FILE } from '../services/bookFiles';
 import { colors, bookTheme, friendlyLocale, LOCALES, radius } from '../theme';
 import type { AppStackParams } from '../navigation/types';
 
-const CREATE_LOCALES = [
-  { value: 'en-US', label: 'Inglés (US)' },
-  { value: 'en-GB', label: 'Inglés (UK)' },
-  { value: 'es-MX', label: 'Español' },
-  { value: 'pt-BR', label: 'Português' },
-  { value: 'de-DE', label: 'Deutsch' },
-  { value: 'fr-FR', label: 'Français' },
-] as const;
-
-const greeting = () => {
+const greetingKey = () => {
   const hour = new Date().getHours();
-  return hour < 12 ? '¡Buenos días! ☀️' : hour < 19 ? '¡Buenas tardes! 📖' : '¡Buenas noches! 🌙';
+  return hour < 12 ? 'library.homeMorning' : hour < 19 ? 'library.homeAfternoon' : 'library.homeEvening';
 };
 
 export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackParams, 'Library'>) {
-  const { db, auth, user, sync } = useApp();
+  const { db, auth, user, sync, uiLocale, setUiLocale } = useApp();
+  const { t, p } = useT();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const books = useLiveQuery(db, (d) => d.listBooks(), [], [] as Book[]);
@@ -39,14 +31,13 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
   const [syncing, setSyncing] = useState(false);
   const [about, setAbout] = useState(false);
   const [langModalOpen, setLangModalOpen] = useState(false);
-  const [uiLocale, setUiLocale] = useState<MobileLocale>('es');
   const [createOpen, setCreateOpen] = useState(false);
   const [cloudOpen, setCloudOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Book | null>(null);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const [editing, setEditing] = useState<Book | null>(null);
   const [exported, setExported] = useState<{ book: Book; fileName: string; filePath?: string; paragraphs: number; pages: number } | null>(null);
   const isGuest = user?.isGuest === true;
-  const t = MOBILE_STRINGS[uiLocale];
 
   const open = useCallback((book: Book) => navigation.navigate('Book', { bookId: book.id }), [navigation]);
 
@@ -58,9 +49,9 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
     toast(
       result.success
         ? result.isGuest
-          ? 'Modo local: conecta tu cuenta para respaldar en la nube.'
-          : `Sincronizado con la nube (${result.pushedCount} subidos, ${result.pulledCount} descargados).`
-        : (result.errorMessage ?? 'Error al sincronizar.'),
+          ? t('library.localModeHint')
+          : t('library.syncedWithCloud', { pushed: result.pushedCount, pulled: result.pulledCount })
+        : (result.errorMessage ?? t('library.syncError')),
       result.success ? 'info' : 'error',
     );
   };
@@ -68,20 +59,20 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
   const importBook = async () => {
     const result = await importBookFromFile(db);
     if (!result.success) {
-      if (result.errorMessage !== NO_FILE) toast(result.errorMessage ?? 'No se pudo importar el libro.', 'error');
+      if (result.errorMessage !== NO_FILE) toast(result.errorMessage ?? t('library.importFailed'), 'error');
       return;
     }
     if (result.book) {
-      toast(`«${result.book.title}» importado con éxito (${result.totalParagraphs} párrafos listos en Modo Lectura).`, 'success');
+      toast(t('library.imported', { title: result.book.title, paragraphs: result.totalParagraphs }), 'success');
       open(result.book);
     }
   };
 
   const exportBook = async (book: Book) => {
-    toast(`Exportando «${book.title}» en Modo Lectura...`);
+    toast(t('library.exporting', { title: book.title }));
     const result = await exportBookToFile(db, book.id);
     if (!result.success) {
-      toast(result.errorMessage ?? 'No se pudo exportar el libro.', 'error');
+      toast(result.errorMessage ?? t('library.exportFailed'), 'error');
       return;
     }
     setExported({ book, fileName: result.fileName, filePath: result.filePath, paragraphs: result.totalParagraphs, pages: result.totalPages });
@@ -96,40 +87,42 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
   };
 
   const header = (
-    <View style={{ paddingTop: insets.top + 8, backgroundColor: colors.surface, paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <Image source={require('../../assets/branding/my_school_my_parents_logo.png')} style={{ width: 36, height: 36, borderRadius: 9 }} accessibilityLabel="Logotipo" />
+    <View style={{ paddingTop: insets.top + 8, backgroundColor: colors.surface, paddingHorizontal: 16, paddingBottom: 8, gap: 8 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <Image source={require('../../assets/branding/my_school_my_parents_logo.png')} style={{ width: 36, height: 36, borderRadius: 9 }} accessibilityLabel={t('library.logoAlt')} />
       <View style={{ flex: 1 }}>
         <AppText accessibilityRole="header" style={{ fontWeight: '800', fontSize: 18 }}>
-          {t.booksTitle}
+          {t('booksTitle')}
         </AppText>
         <AppText style={{ fontSize: 11, fontWeight: '500', color: colors.muted }}>{displayVersion()}</AppText>
       </View>
-      <IconButton icon="translate" label="Cambiar idioma" onPress={() => setLangModalOpen(true)} />
-      <IconButton icon="info-outline" label="Información de la app" onPress={() => setAbout(true)} />
+    </View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 6 }}>
+      <IconButton icon="translate" label={t('library.changeLanguage')} onPress={() => setLangModalOpen(true)} />
+      <IconButton icon="info-outline" label={t('library.appInfo')} onPress={() => setAbout(true)} />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={isGuest ? 'Modo local (toca para conectar una cuenta)' : 'Sincronizar con la nube'}
+        accessibilityLabel={isGuest ? t('library.localModeAccessible') : t('library.cloudSyncAccessible')}
         disabled={syncing}
         onPress={() => (isGuest ? setCloudOpen(true) : void runSync())}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: colors.outline, borderRadius: 10, paddingHorizontal: 10, height: 34 }}
       >
         <Icon name={syncing ? 'sync' : isGuest ? 'cloud-off' : 'cloud-done'} size={16} color={colors.textSoft} />
-        <AppText style={{ fontSize: 12, fontWeight: '600' }}>{isGuest ? 'Local' : 'Nube'}</AppText>
+        <AppText style={{ fontSize: 12, fontWeight: '600' }}>{isGuest ? t('library.syncLocalLabel') : t('library.syncCloudLabel')}</AppText>
       </Pressable>
-      <IconButton icon="file-download" label="Importar libro (Modo Lectura)" onPress={() => void importBook()} />
-      <IconButton icon="logout" label="Cerrar sesión" onPress={() => void auth.signOut()} />
+      <IconButton icon="file-download" label={t('library.importBookLabel')} onPress={() => void importBook()} />
+      <IconButton icon="logout" label={t('library.signOut')} onPress={() => setLogoutOpen(true)} />
+    </View>
     </View>
   );
 
   const empty = (
     <View style={{ alignItems: 'center', padding: 32, gap: 14, marginTop: 24 }}>
       <Image source={require('../../assets/branding/my_school_my_parents_logo.png')} style={{ width: 96, height: 96, borderRadius: 24 }} />
-      <AppText style={{ fontSize: 24, fontWeight: '800', textAlign: 'center' }}>¡Vamos a leer juntos!</AppText>
-      <AppText style={{ textAlign: 'center', color: colors.muted, lineHeight: 21 }}>
-        Añade fotos de cuentos o lecturas escolares para practicarlas en inglés o español con pronunciación guiada.
-      </AppText>
-      <Button label="Crear mi primer libro" icon="add" onPress={() => setCreateOpen(true)} />
-      <Button label="Importar libro existente" icon="file-download" variant="outlined" onPress={() => void importBook()} />
+      <AppText style={{ fontSize: 24, fontWeight: '800', textAlign: 'center' }}>{t('library.welcomeTitle')}</AppText>
+      <AppText style={{ textAlign: 'center', color: colors.muted, lineHeight: 21 }}>{t('library.welcomeDesc')}</AppText>
+      <Button label={t('library.createFirstBook')} icon="add" onPress={() => setCreateOpen(true)} />
+      <Button label={t('library.importExisting')} icon="file-download" variant="outlined" onPress={() => void importBook()} />
     </View>
   );
 
@@ -144,10 +137,8 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
         ListHeaderComponent={
           books.length > 0 ? (
             <View style={{ marginBottom: 4 }}>
-              <AppText style={{ fontSize: 22, fontWeight: '800' }}>{greeting()} A leer juntos</AppText>
-              <AppText style={{ color: colors.muted, fontSize: 13 }}>
-                {books.length} {books.length === 1 ? 'libro en tu estantería familiar' : 'libros en tu estantería familiar'}
-              </AppText>
+              <AppText style={{ fontSize: 22, fontWeight: '800' }}>{t(greetingKey())}</AppText>
+              <AppText style={{ color: colors.muted, fontSize: 13 }}>{p('library.booksCount', books.length)}</AppText>
             </View>
           ) : null
         }
@@ -157,7 +148,7 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
           return (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Abrir ${book.title}`}
+              accessibilityLabel={t('library.openBook', { title: book.title })}
               onPress={() => open(book)}
               style={({ pressed }) => ({
                 flexDirection: 'row',
@@ -182,18 +173,18 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
                     <AppText style={{ fontSize: 12, color: colors.muted }}>{theme.vibe}</AppText>
                   </View>
                   <ActionMenu
-                    label="Opciones de libro"
+                    label={t('library.bookOptions')}
                     actions={[
-                      { key: 'language', label: 'Configurar idioma', icon: 'translate', onPress: () => setEditing(book) },
-                      { key: 'export', label: 'Exportar (Modo Lectura)', icon: 'ios-share', onPress: () => void exportBook(book) },
-                      { key: 'delete', label: 'Eliminar libro', icon: 'delete-outline', danger: true, onPress: () => setToDelete(book) },
+                      { key: 'language', label: t('library.configureLanguage'), icon: 'translate', onPress: () => setEditing(book) },
+                      { key: 'export', label: t('library.exportReadingMode'), icon: 'ios-share', onPress: () => void exportBook(book) },
+                      { key: 'delete', label: t('library.deleteBook'), icon: 'delete-outline', danger: true, onPress: () => setToDelete(book) },
                     ]}
                   />
                 </View>
                 <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                   <Badge label={friendlyLocale(book.learningLocale)} bg={theme.badge} fg={theme.badgeText} icon="translate" />
                   <Badge
-                    label={s ? `${s.pages} ${s.pages === 1 ? 'página' : 'páginas'} · ${s.paragraphs} párrafos` : 'Sin páginas aprobadas'}
+                    label={s ? p('library.bookStats', s.pages, { pages: s.pages, paragraphs: s.paragraphs }) : t('library.noApprovedPages')}
                     bg={colors.surfaceMid}
                     fg={colors.textSoft}
                   />
@@ -205,7 +196,7 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
       />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Crear libro"
+        accessibilityLabel={t('createBook')}
         onPress={() => setCreateOpen(true)}
         style={{
           position: 'absolute',
@@ -222,7 +213,7 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
         }}
       >
         <Icon name="add" size={24} color={colors.text} />
-        <AppText style={{ fontSize: 15, fontWeight: '800' }}>Crear libro</AppText>
+        <AppText style={{ fontSize: 15, fontWeight: '800' }}>{t('createBook')}</AppText>
       </Pressable>
 
       <CreateBookDialog
@@ -242,28 +233,39 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
             const book = editing;
             setEditing(null);
             await db.updateBookLanguages(book.id, { homeLocale: home, learningLocale: learning });
-            toast(`Idioma de «${book.title}» actualizado a ${friendlyLocale(learning)}.`);
+            toast(t('library.languageUpdated', { title: book.title, language: friendlyLocale(learning) }));
           }}
         />
       ) : null}
       <ConfirmDialog
+        visible={logoutOpen}
+        title={t('logoutTitle')}
+        message={t('logoutMessage')}
+        confirmLabel={t('logoutConfirm')}
+        onCancel={() => setLogoutOpen(false)}
+        onConfirm={() => {
+          setLogoutOpen(false);
+          void auth.signOut();
+        }}
+      />
+      <ConfirmDialog
         visible={toDelete !== null}
-        title={`¿Eliminar «${toDelete?.title ?? ''}»?`}
-        message="Se eliminarán sus textos locales. Esta acción no se puede deshacer desde la app."
-        confirmLabel="Eliminar"
+        title={t('library.deleteConfirmTitle', { title: toDelete?.title ?? '' })}
+        message={t('library.deleteConfirmMessage')}
+        confirmLabel={t('common.delete')}
         danger
         onConfirm={() => void confirmDelete()}
         onCancel={() => setToDelete(null)}
       />
       <Dialog
         visible={cloudOpen}
-        title="Respaldar en la nube"
+        title={t('library.cloudBackupTitle')}
         onClose={() => setCloudOpen(false)}
         actions={
           <>
-            <Button label="Seguir en local" variant="text" onPress={() => setCloudOpen(false)} />
+            <Button label={t('library.stayLocal')} variant="text" onPress={() => setCloudOpen(false)} />
             <Button
-              label="Crear cuenta o entrar"
+              label={t('library.createAccountOrSignIn')}
               icon="account-circle"
               onPress={() => {
                 setCloudOpen(false);
@@ -273,11 +275,9 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
           </>
         }
       >
-        <AppText style={{ lineHeight: 21 }}>
-          Estás usando la app en modo local. Inicia sesión o crea una cuenta para respaldar tus libros en la nube y acceder a ellos desde otros dispositivos. Tus libros locales se conservan en este dispositivo.
-        </AppText>
+        <AppText style={{ lineHeight: 21 }}>{t('library.cloudBackupBody')}</AppText>
       </Dialog>
-      <AboutDialog visible={about} onClose={() => setAbout(false)} syncStatus={isGuest ? 'Modo Local (sin conexión)' : 'Sincronizado con la nube'} />
+      <AboutDialog visible={about} onClose={() => setAbout(false)} syncStatus={isGuest ? t('library.syncStatusLocal') : t('library.syncStatusCloud')} />
       <LanguageSwitcherModal
         visible={langModalOpen}
         currentLocale={uiLocale}
@@ -286,20 +286,18 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
       />
       <Dialog
         visible={exported !== null}
-        title="Libro exportado"
+        title={t('library.exportedTitle')}
         onClose={() => setExported(null)}
-        actions={<Button label="Aceptar" variant="text" onPress={() => setExported(null)} />}
+        actions={<Button label={t('common.accept')} variant="text" onPress={() => setExported(null)} />}
       >
         {exported ? (
           <View style={{ gap: 10 }}>
-            <AppText style={{ lineHeight: 20 }}>
-              El libro «{exported.book.title}» quedó exportado en formato JSON universal de Modo Lectura compatible.
-            </AppText>
-            <View style={{ backgroundColor: '#f1f5f9', borderRadius: radius.sm, padding: 10 }}>
-              <AppText style={{ fontSize: 12 }}>Archivo: {exported.fileName}</AppText>
+            <AppText style={{ lineHeight: 20 }}>{t('library.exportedBody', { title: exported.book.title })}</AppText>
+            <View style={{ backgroundColor: colors.surfaceMid, borderRadius: radius.sm, padding: 10 }}>
+              <AppText style={{ fontSize: 12 }}>{t('library.exportedFile', { fileName: exported.fileName })}</AppText>
             </View>
             <AppText style={{ fontSize: 12, color: colors.muted }}>
-              {exported.paragraphs} párrafos y {exported.pages} página(s) incluidos.
+              {p('library.exportedSummary', exported.pages, { paragraphs: exported.paragraphs, pages: exported.pages })}
             </AppText>
           </View>
         ) : null}
@@ -309,52 +307,63 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
 }
 
 function CreateBookDialog({ visible, onClose, onCreate }: { visible: boolean; onClose: () => void; onCreate: (title: string, learning: string) => void }) {
+  const { t } = useT();
   const [title, setTitle] = useState('');
   const [learning, setLearning] = useState('en-US');
+  const titleError = title.trim() ? validateBookTitle(title) : null;
+  const createLocales = [
+    { value: 'en-US', label: t('library.localeEnUs') },
+    { value: 'en-GB', label: t('library.localeEnGb') },
+    { value: 'es-MX', label: 'Español' },
+    { value: 'pt-BR', label: 'Português' },
+    { value: 'de-DE', label: 'Deutsch' },
+    { value: 'fr-FR', label: 'Français' },
+  ] as const;
   const submit = () => {
-    if (!title.trim()) return;
+    if (!title.trim() || titleError) return;
     onCreate(title.trim(), learning);
     setTitle('');
   };
   return (
     <Dialog
       visible={visible}
-      title="Nuevo libro"
+      title={t('library.newBookTitle')}
       onClose={onClose}
       actions={
         <>
-          <Button label="Cancelar" variant="text" onPress={onClose} />
-          <Button label="Crear" disabled={!title.trim()} onPress={submit} />
+          <Button label={t('cancel')} variant="text" onPress={onClose} />
+          <Button label={t('common.create')} disabled={!title.trim() || titleError !== null} onPress={submit} />
         </>
       }
     >
       <View style={{ gap: 14, paddingVertical: 4 }}>
-        <TextField label="Título del libro" placeholder="Ej. Harry Potter, Ciencias Naturales..." value={title} onChangeText={setTitle} autoFocus onSubmitEditing={submit} />
-        <OptionPicker label="Idioma del libro (para voz)" value={learning} options={CREATE_LOCALES} onChange={setLearning} />
+        <TextField label={t('library.bookTitleLabel')} placeholder={t('library.bookTitlePlaceholder')} value={title} onChangeText={setTitle} error={titleError} autoFocus onSubmitEditing={submit} />
+        <OptionPicker label={t('library.bookLanguageVoice')} value={learning} options={createLocales} onChange={setLearning} />
       </View>
     </Dialog>
   );
 }
 
 function EditLanguageDialog({ book, onClose, onSave }: { book: Book; onClose: () => void; onSave: (home: string, learning: string) => void }) {
+  const { t } = useT();
   const [learning, setLearning] = useState(book.learningLocale);
   const [home, setHome] = useState(book.homeLocale);
   return (
     <Dialog
       visible
-      title={`Idioma de «${book.title}»`}
+      title={t('library.editLanguageTitle', { title: book.title })}
       onClose={onClose}
       actions={
         <>
-          <Button label="Cancelar" variant="text" onPress={onClose} />
-          <Button label="Guardar" onPress={() => onSave(home, learning)} />
+          <Button label={t('cancel')} variant="text" onPress={onClose} />
+          <Button label={t('common.save')} onPress={() => onSave(home, learning)} />
         </>
       }
     >
       <View style={{ gap: 14, paddingVertical: 4 }}>
-        <AppText style={{ color: colors.muted }}>Ajusta los idiomas usados para la voz en voz alta y las ayudas de vocabulario.</AppText>
-        <OptionPicker label="Idioma del libro (para voz y lectura)" value={learning} options={LOCALES} onChange={setLearning} />
-        <OptionPicker label="Idioma nativo de la familia" value={home} options={LOCALES.filter((l) => ['es-MX', 'es-ES', 'en-US', 'pt-BR', 'de-DE', 'fr-FR'].includes(l.value))} onChange={setHome} />
+        <AppText style={{ color: colors.muted }}>{t('library.editLanguageHint')}</AppText>
+        <OptionPicker label={t('library.bookLanguageVoiceReading')} value={learning} options={LOCALES} onChange={setLearning} />
+        <OptionPicker label={t('library.familyNativeLanguage')} value={home} options={LOCALES.filter((l) => ['es-MX', 'es-ES', 'en-US', 'pt-BR', 'de-DE', 'fr-FR'].includes(l.value))} onChange={setHome} />
       </View>
     </Dialog>
   );

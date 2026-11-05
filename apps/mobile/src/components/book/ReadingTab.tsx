@@ -1,22 +1,24 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useRef, type RefObject } from 'react';
+import { AccessibilityInfo, ScrollView, View, findNodeHandle } from 'react-native';
 import { AppText, Button, Card, Icon } from '../ui';
 import { ReadingParagraph } from '../ReadingParagraph';
 import type { Paragraph } from '../../db/schema';
 import type { SpeechSnapshot } from '../../speech/speechController';
 import type { TextRange } from '../../lib/textRanges';
 import { colors } from '../../theme';
+import { useT } from '../../context/AppContext';
 
 export const languageName = (locale: string) =>
   locale.startsWith('en') ? 'English' : locale.startsWith('es') ? 'Español' : locale;
 
 export function EmptyState({ title, text, onAction }: { title: string; text: string; onAction: () => void }) {
+  const { t } = useT();
   return (
     <View style={{ alignItems: 'center', padding: 32, gap: 12 }}>
       <Icon name="auto-stories" size={64} color={colors.primary} />
       <AppText style={{ fontSize: 20, fontWeight: '800', textAlign: 'center' }}>{title}</AppText>
       <AppText style={{ textAlign: 'center', color: colors.muted }}>{text}</AppText>
-      <Button icon="add-photo-alternate" label="Ir a añadir páginas" onPress={onAction} />
+      <Button icon="add-photo-alternate" label={t('book.goToPages')} onPress={onAction} />
     </View>
   );
 }
@@ -29,6 +31,8 @@ export function ReadingTab({
   snap,
   fontSize,
   canListen,
+  onOpenVoiceSettings,
+  scrollRef,
   onExport,
   onGoPages,
   onWord,
@@ -40,16 +44,38 @@ export function ReadingTab({
   snap: SpeechSnapshot;
   fontSize: number;
   canListen: boolean;
+  onOpenVoiceSettings: () => void;
+  scrollRef: RefObject<ScrollView | null>;
   onExport: () => void;
   onGoPages: () => void;
   onWord: (index: number, range: TextRange) => void;
   onListenSelection: (index: number, excerpt: string, range: TextRange) => void;
 }) {
+  const { t } = useT();
+  const paragraphViews = useRef(new Map<number, View>());
+  const activeIndex = snap.state === 'speaking' ? snap.activeParagraph : -1;
+
+  useEffect(() => {
+    const view = activeIndex >= 0 ? paragraphViews.current.get(activeIndex) : undefined;
+    const scroll = scrollRef.current;
+    const handle = scroll ? findNodeHandle(scroll) : null;
+    if (!view || !scroll || !handle) return;
+    view.measureLayout(
+      handle,
+      (_x, y) => {
+        void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) =>
+          scroll.scrollTo({ y: Math.max(0, y - 120), animated: !reduceMotion }),
+        );
+      },
+      () => undefined,
+    );
+  }, [activeIndex, scrollRef]);
+
   if (paragraphs.length === 0) {
     return (
       <EmptyState
-        title="Todavía no hay páginas aprobadas"
-        text="Añade fotos de páginas en la pestaña de Páginas para leer y escuchar."
+        title={t('book.emptyReadingTitle')}
+        text={t('book.emptyReadingText')}
         onAction={onGoPages}
       />
     );
@@ -68,7 +94,7 @@ export function ReadingTab({
         children.push(
           <View key={`sep-${p.pageId}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 14 }}>
             <View style={{ flex: 1, height: 1, backgroundColor: colors.outlineVariant }} />
-            <AppText style={{ fontSize: 12, fontWeight: '700', color: colors.muted }}>✦ Página {pageCounter} ✦</AppText>
+            <AppText style={{ fontSize: 12, fontWeight: '700', color: colors.muted }}>{t('book.pageSeparator', { number: pageCounter })}</AppText>
             <View style={{ flex: 1, height: 1, backgroundColor: colors.outlineVariant }} />
           </View>,
         );
@@ -80,6 +106,10 @@ export function ReadingTab({
     children.push(
       <View
         key={p.id}
+        ref={(el) => {
+          if (el) paragraphViews.current.set(index, el);
+          else paragraphViews.current.delete(index);
+        }}
         style={{
           paddingLeft: isActive ? 16 : 0,
           paddingVertical: isActive ? 10 : 0,
@@ -102,7 +132,7 @@ export function ReadingTab({
         {isActive ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
             <Icon name={speaking ? 'graphic-eq' : 'pause-circle-outline'} size={16} color={colors.primary} />
-            <AppText style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>{speaking ? 'Leyendo ahora…' : 'En pausa'}</AppText>
+            <AppText style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>{speaking ? t('book.readingNow') : t('book.paused')}</AppText>
           </View>
         ) : null}
       </View>,
@@ -115,22 +145,31 @@ export function ReadingTab({
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <View style={{ backgroundColor: colors.primaryContainer, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
             <AppText style={{ fontSize: 10.5, fontWeight: '800', letterSpacing: 0.8, color: colors.onPrimaryContainer }}>
-              {`LECTURA · ${languageName(learningLocale)}`.toUpperCase()}
+              {t('book.readingBadge', { language: languageName(learningLocale) }).toUpperCase()}
             </AppText>
           </View>
           <AppText style={{ flex: 1, fontSize: 12, color: colors.muted }}>
-            {minutes} min de lectura · {totalWords} palabras
+            {t('book.readingStats', { minutes, words: totalWords })}
           </AppText>
-          <Button compact variant="outlined" icon="ios-share" label="Exportar" onPress={onExport} />
+          <Button compact variant="outlined" icon="ios-share" label={t('book.export')} onPress={onExport} />
         </View>
         <AppText accessibilityRole="header" style={{ fontSize: 28, fontWeight: '800', letterSpacing: -0.5 }}>
           {title}
         </AppText>
         <View style={{ height: 1, backgroundColor: colors.outlineVariant }} />
       </View>
+      {!canListen ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+          <Icon name="volume-off" size={18} color={colors.muted} />
+          <AppText style={{ flex: 1, fontSize: 13, color: colors.muted }}>
+            {t('noVoiceFor', { language: languageName(learningLocale) })}
+          </AppText>
+          <Button compact variant="outlined" label={t('configureVoice')} onPress={onOpenVoiceSettings} />
+        </View>
+      ) : null}
       {children}
       <View style={{ alignSelf: 'center', backgroundColor: colors.tertiaryContainer, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, marginTop: 8 }}>
-        <AppText style={{ fontWeight: '800', color: colors.onTertiaryContainer }}>🎉 ¡Fin de la lectura! Gran trabajo juntos</AppText>
+        <AppText style={{ fontWeight: '800', color: colors.onTertiaryContainer }}>{t('book.readingFinished')}</AppText>
       </View>
     </Card>
   );

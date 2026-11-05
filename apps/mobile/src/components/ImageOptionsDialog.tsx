@@ -3,13 +3,8 @@ import { View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { AppText, Button, Dialog, OptionPicker } from './ui';
 import type { ImageTransformOptions } from '../lib/imageTransform';
+import { useT } from '../context/AppContext';
 import { colors } from '../theme';
-
-const TURNS = [
-  { value: 0, label: 'Sin rotar' },
-  { value: 1, label: '90° a la derecha' },
-  { value: -1, label: '90° a la izquierda' },
-] as const;
 
 /** «Ajustar páginas»: recorte centrado (65–100 %) y rotación antes de leer las fotos. */
 export function ImageOptionsDialog({
@@ -21,28 +16,34 @@ export function ImageOptionsDialog({
   onCancel: () => void;
   onContinue: (o: ImageTransformOptions) => void;
 }) {
+  const { t } = useT();
   const [crop, setCrop] = useState(1);
   const [turns, setTurns] = useState<number>(0);
+  const TURNS = [
+    { value: 0, label: t('capture.noRotation') },
+    { value: 1, label: t('capture.rotateRight') },
+    { value: -1, label: t('capture.rotateLeft') },
+  ] as const;
   return (
     <Dialog
       visible={visible}
-      title="Ajustar páginas"
+      title={t('capture.adjustPages')}
       onClose={onCancel}
       actions={
         <>
-          <Button label="Cancelar" variant="text" onPress={onCancel} />
-          <Button label="Continuar" onPress={() => onContinue({ cropFactor: crop, quarterTurns: turns })} />
+          <Button label={t('cancel')} variant="text" onPress={onCancel} />
+          <Button label={t('capture.continue')} onPress={() => onContinue({ cropFactor: crop, quarterTurns: turns })} />
         </>
       }
     >
       <View style={{ gap: 14, paddingVertical: 4 }}>
         <View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <AppText style={{ fontWeight: '700' }}>Recorte centrado</AppText>
+            <AppText style={{ fontWeight: '700' }}>{t('capture.centeredCrop')}</AppText>
             <AppText style={{ color: colors.primary, fontWeight: '700' }}>{Math.round(crop * 100)}%</AppText>
           </View>
           <Slider
-            accessibilityLabel="Recorte centrado"
+            accessibilityLabel={t('capture.centeredCrop')}
             minimumValue={0.65}
             maximumValue={1}
             step={0.05}
@@ -52,7 +53,7 @@ export function ImageOptionsDialog({
             onValueChange={setCrop}
           />
         </View>
-        <OptionPicker label="Rotación" value={turns} options={TURNS} onChange={setTurns} />
+        <OptionPicker label={t('capture.rotation')} value={turns} options={TURNS} onChange={setTurns} />
       </View>
     </Dialog>
   );

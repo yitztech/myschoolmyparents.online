@@ -61,6 +61,18 @@ test('dictionary: traduce palabras clave a los 5 idiomas soportados', () => {
   assert.equal(lookupWord('Haus', { homeLocale: 'en-US', learningLocale: 'de-DE' }).translation, 'House');
 });
 
+test('dictionary: miss honesto — sin plantilla que finja definición', () => {
+  // Sin entrada en el diccionario: found=false y meaning vacío; la ficha
+  // mostrará su propio copy de «todavía no la tenemos».
+  const miss = lookupWord('adventure', { homeLocale: 'es-MX', learningLocale: 'en-US' });
+  assert.equal(miss.found, false);
+  assert.equal(miss.meaning, '');
+
+  const hit = lookupWord('cat', { homeLocale: 'es-MX', learningLocale: 'en-US' });
+  assert.equal(hit.found, true);
+  assert.ok(hit.meaning.length > 0);
+});
+
 test('ocrLangForLocale: mapea los 5 idiomas a Tesseract', () => {
   assert.equal(ocrLangForLocale('es-MX'), 'spa');
   assert.equal(ocrLangForLocale('en-US'), 'eng');

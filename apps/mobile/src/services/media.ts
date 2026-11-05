@@ -4,6 +4,7 @@ import { Asset } from 'expo-asset';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { buildImageActions, isIdentityTransform, type ImageTransformOptions } from '../lib/imageTransform';
+import { tr } from '../i18n';
 
 const capturesDir = () => {
   const dir = new Directory(Paths.document, 'a00-captures');
@@ -53,12 +54,12 @@ export type PickResult = { uris: string[] } | null;
 
 const PICK_OPTIONS = { mediaTypes: ['images'] as ImagePicker.MediaType[], quality: 0.9 };
 
-/** Foto con la cámara; null si se cancela o se deniega el permiso. */
-export async function takePhoto(): Promise<PickResult> {
+/** Foto con la cámara. `denied` indica que el permiso está denegado, distinto de cancelar. */
+export async function takePhoto(): Promise<{ picked: PickResult; denied: boolean }> {
   const perm = await ImagePicker.requestCameraPermissionsAsync();
-  if (!perm.granted) return null;
+  if (!perm.granted) return { picked: null, denied: true };
   const res = await ImagePicker.launchCameraAsync({ ...PICK_OPTIONS });
-  return res.canceled ? null : { uris: res.assets.map((a) => a.uri) };
+  return { picked: res.canceled ? null : { uris: res.assets.map((a) => a.uri) }, denied: false };
 }
 
 /** Varias fotos de la galería; null si se cancela. */
@@ -82,6 +83,6 @@ export async function recoverLostPhotos(): Promise<string[]> {
 export async function sampleImage(): Promise<string> {
   const asset = Asset.fromModule(require('../../assets/sample/learning_page.png'));
   await asset.downloadAsync();
-  if (!asset.localUri) throw new Error('No se pudo cargar la página de ejemplo.');
+  if (!asset.localUri) throw new Error(tr('capture.sampleLoadFailed'));
   return persistImage(asset.localUri);
 }

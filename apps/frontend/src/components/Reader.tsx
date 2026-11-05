@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { db } from '../lib/db';
 import { speech, type SpeakItem } from '../lib/speech';
 import type { Book, Paragraph } from '../lib/types';
@@ -26,6 +26,8 @@ export function Reader({ book, paragraphs }: Props) {
   const [activeWordModal, setActiveWordModal] = useState<WordInfo | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const paraRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const wordTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
 
   // Sincronizar tamaño de fuente de la app con el del libro
   useEffect(() => {
@@ -118,7 +120,8 @@ export function Reader({ book, paragraphs }: Props) {
     );
   }
 
-  function handleWordClick(word: string) {
+  function handleWordClick(word: string, e: MouseEvent<HTMLButtonElement>) {
+    wordTriggerRef.current = e.currentTarget;
     const info = lookupWord(word, {
       homeLocale: book.homeLocale,
       learningLocale: book.learningLocale,
@@ -126,6 +129,28 @@ export function Reader({ book, paragraphs }: Props) {
     setActiveWordModal(info);
     a11y.announce(`Palabra seleccionada: ${info.displayWord}. ${info.translation ? `Traducción: ${info.translation}.` : ''}`);
   }
+
+  function closeWordCard() {
+    setActiveWordModal(null);
+    // El foco vuelve a la palabra que abrió la ficha: el teclado no queda tirado.
+    wordTriggerRef.current?.focus();
+  }
+
+  // Ficha accesible: el foco entra por el botón de cierre, Escape y el clic
+  // fuera la cierran y devuelven el foco a la palabra de origen.
+  useEffect(() => {
+    if (!activeWordModal) return;
+    closeBtnRef.current?.focus();
+    function onCardKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        closeWordCard();
+      }
+    }
+    window.addEventListener('keydown', onCardKey);
+    return () => window.removeEventListener('keydown', onCardKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWordModal]);
 
   const speaking = snap.state === 'speaking' || snap.state === 'preparing';
   const paused = snap.state === 'paused';
@@ -141,6 +166,12 @@ export function Reader({ book, paragraphs }: Props) {
           target.tagName === 'SELECT' ||
           target.isContentEditable)
       ) {
+        return;
+      }
+      // Si el foco está en un control del lector (botones, ficha de palabra,
+      // toolbar), Espacio y Enter activan ese control como manda el teclado
+      // estándar: los atajos de lectura no le roban la tecla.
+      if (target && target.closest('button, a, [role="button"]')) {
         return;
       }
 
@@ -310,7 +341,7 @@ export function Reader({ book, paragraphs }: Props) {
 
       {/* Modo Enfoque: Muestra un solo párrafo en grande con botones gigantes (Teleprompter) */}
       {a11y.focusMode && paragraphs.length > 0 && (
-        <div className="grid gap-4 rounded-2xl border-4 border-ink bg-white p-6 shadow-md">
+        <div className="reader-focus-stage grid gap-4 rounded-2xl border-4 border-ink bg-white p-6 shadow-md">
           <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-ink-soft">
             <span>
               {t.reader.paragraphLabel} {focusedIndex + 1} / {paragraphs.length}
@@ -449,6 +480,9 @@ export function Reader({ book, paragraphs }: Props) {
           role="dialog"
           aria-modal="true"
           aria-label={t.reader.touchWordCard}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeWordCard();
+          }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-xs"
         >
           <div className="w-full max-w-md rounded-2xl border-3 border-ink bg-white p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150">
@@ -462,7 +496,8 @@ export function Reader({ book, paragraphs }: Props) {
                 </h3>
               </div>
               <button
-                onClick={() => setActiveWordModal(null)}
+                ref={closeBtnRef}
+                onClick={closeWordCard}
                 className="rounded-lg p-1.5 text-ink hover:bg-paper-deep"
                 aria-label="Cerrar ficha"
               >
@@ -480,20 +515,33 @@ export function Reader({ book, paragraphs }: Props) {
                 </div>
               )}
 
-              <div className="rounded-xl border border-ink/10 bg-paper-deep/30 p-3">
-                <span className="text-xs font-bold text-ink-soft uppercase tracking-wider">
-                  {t.reader.definition}:
-                </span>
-                <p className="mt-1 text-sm font-medium leading-relaxed text-ink">
-                  {activeWordModal.meaning}
-                </p>
-              </div>
+              {activeWordModal.found ? (
+                <div className="rounded-xl border border-ink/10 bg-paper-deep/30 p-3">
+                  <span className="text-xs font-bold text-ink-soft uppercase tracking-wider">
+                    {t.reader.definition}:
+                  </span>
+                  <p className="mt-1 text-sm font-medium leading-relaxed text-ink">
+                    {activeWordModal.meaning}
+                  </p>
+                </div>
+              ) : (
+                // Miss honesto: sin definición inventada ni atajo falso a un
+                // glosario que no existe; el botón real de escuchar está abajo.
+                <div className="rounded-xl border border-dashed border-ink/25 bg-paper-deep/20 p-3">
+                  <span className="text-xs font-bold text-ink-soft uppercase tracking-wider">
+                    {t.reader.definitionMissing}
+                  </span>
+                  <p className="mt-1 text-sm font-medium leading-relaxed text-ink">
+                    {t.reader.definitionMissingHint}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-2 border-t-2 border-ink/15 pt-3">
               <Button
                 variant="outline"
-                onClick={() => setActiveWordModal(null)}
+                onClick={closeWordCard}
                 className="min-h-[44px]"
               >
                 Cerrar
@@ -523,7 +571,7 @@ function renderInteractiveParagraph(
   text: string,
   charIndex: number,
   highlightEnabled: boolean,
-  onWordClick: (word: string) => void
+  onWordClick: (word: string, e: MouseEvent<HTMLButtonElement>) => void
 ) {
   // Encuentra los límites de la palabra resaltada por TTS
   let activeStart = -1;
@@ -557,13 +605,16 @@ function renderInteractiveParagraph(
         <button
           key={`w-${tokenIdx++}-${startIndex}`}
           type="button"
-          onClick={() => onWordClick(token)}
+          onClick={(e) => onWordClick(token, e)}
           className={`inline rounded px-0.5 text-left transition-colors focus-visible:outline-2 ${
             isHighlighted
               ? 'word-active font-black'
               : 'hover:bg-sun/40 hover:underline cursor-pointer'
           }`}
-          aria-label={`Palabra: ${token}. Pulsa para escuchar y ver significado.`}
+          // El nombre accesible es la palabra sola: con el texto de guía por
+          // palabra (19 botones por párrafo) la revisión con lector de
+          // pantalla era insoportable.
+          aria-label={token}
         >
           {token}
         </button>

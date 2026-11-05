@@ -1,4 +1,5 @@
 import { splitForSpeech, extract, type TextRange } from '../lib/textRanges';
+import { tr } from '../i18n';
 
 export type Playback = 'idle' | 'preparing' | 'speaking' | 'paused' | 'completed' | 'failed';
 
@@ -147,7 +148,7 @@ export class SpeechController {
     paragraphs: string[],
     opts: { startParagraph?: number; startOffset?: number; activeParagraphBase?: number; wordRange?: TextRange | null } = {},
   ) {
-    if (!this.snap.voice) throw new Error('Configura una voz para el idioma elegido.');
+    if (!this.snap.voice) throw new Error(tr('book.noVoiceSetup'));
     await this.stop();
     this.paragraphs = [...paragraphs];
     this.paragraph = opts.startParagraph ?? 0;
@@ -210,7 +211,7 @@ export class SpeechController {
         state: 'failed',
         rangeStart: 0,
         rangeEnd: 0,
-        error: 'No pudimos reproducir el texto. Comprueba la voz instalada.',
+        error: tr('book.speechFailed'),
       });
       throw e;
     }

@@ -70,10 +70,10 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
     try {
       const text = await file.text();
       const res = await restoreLibraryBackup(text);
-      setStatusMessage({ text: `Restauración completada: ${res.booksCount} libro(s) recuperados.` });
+      setStatusMessage({ text: interp(t.library.restoreDone, { count: res.booksCount }) });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'archivo inválido';
-      setStatusMessage({ text: `Error al restaurar: ${message}`, isError: true });
+      setStatusMessage({ text: interp(t.library.restoreError, { reason: message }), isError: true });
     } finally {
       e.target.value = '';
     }
@@ -86,11 +86,17 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
     try {
       const res = await synchronizeLibraryWithCloud();
       setStatusMessage({
-        text: `${t.library.syncCloud}: ${res.pushedCount} enviado(s), ${res.pulledCount} descargado(s).`,
+        text:
+          res.pushedCount === 0 && res.pulledCount === 0
+            ? t.library.syncResultNothing
+            : interp(t.library.syncResultDone, {
+                pushed: res.pushedCount,
+                pulled: res.pulledCount,
+              }),
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'error de red';
-      setStatusMessage({ text: `Error al sincronizar: ${message}`, isError: true });
+      setStatusMessage({ text: interp(t.library.syncError, { reason: message }), isError: true });
     } finally {
       setSyncing(false);
     }
@@ -118,7 +124,7 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
             accept=".json,.msmbackup"
             className="hidden"
             onChange={handleRestoreFile}
-            aria-label="Restaurar backup"
+            aria-label={t.library.backupRestore}
           />
           <Button
             variant="outline"
@@ -127,23 +133,23 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
             disabled={syncing}
             title={t.library.syncCloud}
           >
-            <Cloud className="h-4 w-4 mr-1" aria-hidden /> {t.library.syncCloud}
+            <Cloud className="h-4 w-4 mr-1" aria-hidden /> {syncing ? t.library.syncing : t.library.syncCloud}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => void downloadLibraryBackup()}
-            title={t.library.backupOptions}
+            title={t.library.backupSave}
           >
-            <Download className="h-4 w-4 mr-1" aria-hidden /> Backup
+            <Download className="h-4 w-4 mr-1" aria-hidden /> {t.library.backupSave}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => backupInputRef.current?.click()}
-            title={t.library.backupOptions}
+            title={t.library.backupRestore}
           >
-            <Upload className="h-4 w-4 mr-1" aria-hidden /> Restaurar
+            <Upload className="h-4 w-4 mr-1" aria-hidden /> {t.library.backupRestore}
           </Button>
 
           <Dialog open={open} onOpenChange={setOpen}>

@@ -1,79 +1,52 @@
-export type MobileLocale = 'es' | 'en' | 'pt' | 'de' | 'fr';
+import { DEFAULT_MOBILE_LOCALE, type MobileLocale } from './locales';
+import { authStrings } from './catalogs/auth';
+import { bookStrings } from './catalogs/book';
+import { captureStrings } from './catalogs/capture';
+import { commonStrings } from './catalogs/common';
+import { libraryStrings } from './catalogs/library';
 
-export interface MobileLocaleOption {
-  code: MobileLocale;
-  label: string;
-  flag: string;
-  header: string;
-}
+export * from './locales';
 
-export const MOBILE_LOCALES: MobileLocaleOption[] = [
-  { code: 'es', label: 'Español', flag: '🇪🇸', header: 'VER ESTA APP EN ESPAÑOL' },
-  { code: 'en', label: 'English', flag: '🇺🇸', header: 'VIEW THIS APP IN ENGLISH' },
-  { code: 'pt', label: 'Português', flag: '🇧🇷', header: 'VER ESTE APP EM PORTUGUÊS' },
-  { code: 'de', label: 'Deutsch', flag: '🇩🇪', header: 'DIESE APP AUF DEUTSCH ANSEHEN' },
-  { code: 'fr', label: 'Français', flag: '🇫🇷', header: 'VOIR CETTE APPLICATION EN FRANÇAIS' },
-];
+const catalogs = [commonStrings, authStrings, libraryStrings, bookStrings, captureStrings];
 
 export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
-  es: {
-    booksTitle: 'Mis libros',
-    createBook: 'Crear libro',
-    readsIn: 'Se lee en',
-    emptyTitle: 'Sin libros todavía',
-    emptyDesc: 'Toma fotos de una lectura o importa un PDF para empezar.',
-    settings: 'Ajustes',
-    sync: 'Sincronización',
-    account: 'Cuenta',
-    about: 'Acerca de',
-    close: 'Cerrar',
-  },
-  en: {
-    booksTitle: 'My books',
-    createBook: 'Create book',
-    readsIn: 'Reads in',
-    emptyTitle: 'No books yet',
-    emptyDesc: 'Take photos of reading pages or import a PDF to start.',
-    settings: 'Settings',
-    sync: 'Sync',
-    account: 'Account',
-    about: 'About',
-    close: 'Close',
-  },
-  pt: {
-    booksTitle: 'Meus livros',
-    createBook: 'Criar livro',
-    readsIn: 'Lê-se em',
-    emptyTitle: 'Sem livros ainda',
-    emptyDesc: 'Tire fotos de uma leitura ou importe um PDF para começar.',
-    settings: 'Configurações',
-    sync: 'Sincronização',
-    account: 'Conta',
-    about: 'Sobre',
-    close: 'Fechar',
-  },
-  de: {
-    booksTitle: 'Meine Bücher',
-    createBook: 'Buch erstellen',
-    readsIn: 'Liest auf',
-    emptyTitle: 'Noch keine Bücher',
-    emptyDesc: 'Fotografieren Sie Leseseiten oder importieren Sie ein PDF.',
-    settings: 'Einstellungen',
-    sync: 'Synchronisierung',
-    account: 'Konto',
-    about: 'Über',
-    close: 'Schließen',
-  },
-  fr: {
-    booksTitle: 'Mes livres',
-    createBook: 'Créer un livre',
-    readsIn: 'Se lit en',
-    emptyTitle: 'Pas encore de livres',
-    emptyDesc: 'Prenez en photo des pages ou importez un PDF pour commencer.',
-    settings: 'Paramètres',
-    sync: 'Synchronisation',
-    account: 'Compte',
-    about: 'À propos',
-    close: 'Fermer',
-  },
+  es: Object.assign({}, ...catalogs.map((c) => c.es)),
+  en: Object.assign({}, ...catalogs.map((c) => c.en)),
+  pt: Object.assign({}, ...catalogs.map((c) => c.pt)),
+  de: Object.assign({}, ...catalogs.map((c) => c.de)),
+  fr: Object.assign({}, ...catalogs.map((c) => c.fr)),
 };
+
+export const fillText = (template: string, values: Record<string, string | number>) =>
+  template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
+
+/** Forma plural de los cinco idiomas: «one» o «other» (en pt y fr, 0 también es «one»). */
+export function pluralForm(locale: MobileLocale, count: number): 'one' | 'other' {
+  const one = locale === 'pt' || locale === 'fr' ? count >= 0 && count < 2 : count === 1;
+  return one ? 'one' : 'other';
+}
+
+let activeLocale: MobileLocale = DEFAULT_MOBILE_LOCALE;
+
+/** Idioma de la interfaz para los textos que salen fuera de los componentes (servicios, errores). */
+export function setActiveLocale(locale: MobileLocale) {
+  activeLocale = locale;
+}
+
+export const activeMobileLocale = () => activeLocale;
+
+/** Texto del catálogo en un idioma. Las variables van como `{nombre}`. */
+export function translate(locale: MobileLocale, key: string, values: Record<string, string | number> = {}): string {
+  const text = MOBILE_STRINGS[locale][key] ?? MOBILE_STRINGS[DEFAULT_MOBILE_LOCALE][key] ?? key;
+  return fillText(text, values);
+}
+
+/** Texto en plural: la clave base lleva sufijos `.one` y `.other`, y `{count}` es la cantidad. */
+export function translatePlural(locale: MobileLocale, baseKey: string, count: number, values: Record<string, string | number> = {}): string {
+  return translate(locale, `${baseKey}.${pluralForm(locale, count)}`, { count, ...values });
+}
+
+/** Para servicios y código fuera de React: usa el idioma activo de la interfaz. */
+export const tr = (key: string, values?: Record<string, string | number>) => translate(activeLocale, key, values);
+export const trPlural = (baseKey: string, count: number, values?: Record<string, string | number>) =>
+  translatePlural(activeLocale, baseKey, count, values);

@@ -7,6 +7,7 @@
  *   GET  /auth/me   (Bearer)                                    -> { user }
  * Además existe el modo invitado (100 % local, sin sincronización).
  */
+import { tr } from '../i18n';
 
 export interface AuthUser {
   id: string;
@@ -23,7 +24,7 @@ export interface AuthSession {
   expiresAt: number;
 }
 
-/** Error de autenticación con mensaje listo para mostrar en español. */
+/** Error de autenticación con mensaje listo para mostrar en el idioma activo. */
 export class AuthError extends Error {
   constructor(
     public readonly code: string,
@@ -110,11 +111,11 @@ export class HttpAuthService implements AuthService {
         body: body ? JSON.stringify(body) : undefined,
       });
     } catch {
-      throw new AuthError('network', 'No hay conexión con el servidor. Inténtalo de nuevo.');
+      throw new AuthError('network', tr('auth.networkError'));
     }
     const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
     if (!res.ok) {
-      throw new AuthError(data.error ?? 'auth_failed', data.message ?? 'No se pudo completar la operación.');
+      throw new AuthError(data.error ?? 'auth_failed', data.message ?? tr('auth.operationFailed'));
     }
     return data as T;
   }

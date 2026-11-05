@@ -8,6 +8,7 @@ import type { Page, Paragraph } from '../../db/schema';
 import type { SpeechSnapshot } from '../../speech/speechController';
 import type { TextRange } from '../../lib/textRanges';
 import { colors } from '../../theme';
+import { useT } from '../../context/AppContext';
 
 const fileExists = (uri: string | null) => {
   try {
@@ -45,11 +46,12 @@ export function BookViewTab({
   onWord: (index: number, range: TextRange) => void;
   onListenSelection: (index: number, excerpt: string, range: TextRange) => void;
 }) {
+  const { t } = useT();
   if (pages.length === 0) {
     return (
       <EmptyState
-        title="Aún no hay páginas en este libro"
-        text="Añade fotos de tu libro en la pestaña de Páginas para verlas aquí y leerlas página por página."
+        title={t('book.emptyBookTitle')}
+        text={t('book.emptyBookText')}
         onAction={onGoPages}
       />
     );
@@ -62,22 +64,22 @@ export function BookViewTab({
   return (
     <View style={{ gap: 12 }}>
       <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 8 }}>
-        <IconButton icon="arrow-back-ios" label="Página anterior" disabled={index === 0} onPress={() => onPageIndex(index - 1)} />
+        <IconButton icon="arrow-back-ios" label={t('book.previousPage')} disabled={index === 0} onPress={() => onPageIndex(index - 1)} />
         <View style={{ backgroundColor: colors.primaryContainer, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6 }}>
           <AppText style={{ fontWeight: '800', color: colors.onPrimaryContainer }}>
-            Página {index + 1} de {pages.length}
+            {t('book.pageOf', { index: index + 1, total: pages.length })}
           </AppText>
         </View>
-        <IconButton icon="arrow-forward-ios" label="Página siguiente" disabled={index >= pages.length - 1} onPress={() => onPageIndex(index + 1)} />
+        <IconButton icon="arrow-forward-ios" label={t('book.nextPage')} disabled={index >= pages.length - 1} onPress={() => onPageIndex(index + 1)} />
       </Card>
 
       {hasImage ? (
-        <Pressable accessibilityRole="imagebutton" accessibilityLabel="Ampliar foto original" onPress={() => onZoom(page.originalPath!)}>
+        <Pressable accessibilityRole="imagebutton" accessibilityLabel={t('book.zoomOriginal')} onPress={() => onZoom(page.originalPath!)}>
           <Card style={{ padding: 0, overflow: 'hidden', backgroundColor: colors.surfaceMid }}>
-            <Image source={{ uri: page.originalPath! }} style={{ width: '100%', height: 280 }} resizeMode="contain" accessibilityLabel={`Foto original de la página ${index + 1}`} />
+            <Image source={{ uri: page.originalPath! }} style={{ width: '100%', height: 280 }} resizeMode="contain" accessibilityLabel={t('book.originalPhotoOf', { number: index + 1 })} />
             <View style={{ position: 'absolute', right: 8, bottom: 8, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
               <Icon name="zoom-in" size={16} color="#fff" />
-              <AppText style={{ color: '#fff', fontSize: 12 }}>Ampliar foto original</AppText>
+              <AppText style={{ color: '#fff', fontSize: 12 }}>{t('book.zoomOriginal')}</AppText>
             </View>
           </Card>
         </Pressable>
@@ -85,15 +87,15 @@ export function BookViewTab({
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Icon name="auto-stories" size={20} color={colors.primary} />
-        <AppText style={{ flex: 1, fontWeight: '800', fontSize: 16 }}>Lectura · Página {index + 1}</AppText>
+        <AppText style={{ flex: 1, fontWeight: '800', fontSize: 16 }}>{t('book.readingPage', { number: index + 1 })}</AppText>
         {pageParagraphs.length > 0 ? (
-          <Button compact variant="tonal" icon="volume-up" label="Leer página" disabled={!canListen} onPress={() => onListenParagraph(pageParagraphs[0].i)} />
+          <Button compact variant="tonal" icon="volume-up" label={t('book.readPage')} disabled={!canListen} onPress={() => onListenParagraph(pageParagraphs[0].i)} />
         ) : null}
       </View>
 
       {pageParagraphs.length === 0 ? (
         <Card>
-          <AppText>Esta página no tiene párrafos de texto aprobados.</AppText>
+          <AppText>{t('book.pageNoParagraphs')}</AppText>
         </Card>
       ) : (
         pageParagraphs.map(({ p, i }, n) => {

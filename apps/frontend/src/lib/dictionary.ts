@@ -7,7 +7,10 @@ export interface WordInfo {
   word: string;
   displayWord: string;
   partOfSpeech?: string;
+  /** Definición real del diccionario; vacía cuando el término no está (miss). */
   meaning: string;
+  /** true solo cuando existe definición didáctica; false = miss honesto. */
+  found: boolean;
   translation?: string;
   translationLocale?: string;
 }
@@ -157,14 +160,15 @@ export function lookupWord(
   const norm = normalizeWord(rawWord);
   const displayWord = norm ? norm.charAt(0).toUpperCase() + norm.slice(1) : rawWord.trim();
   const translation = findMultilingualTranslation(norm, options.homeLocale);
-  const meaning =
-    COMMON_DEFINITIONS[norm] ??
-    `Palabra del texto («${rawWord.trim()}») en el idioma de lectura.`;
+  // Miss honesto: si no hay definición, la ficha lo dirá con copy propio en
+  // lugar de fingir una («Palabra del texto…»), que parecía contingencia.
+  const definition = COMMON_DEFINITIONS[norm];
 
   return {
     word: norm || rawWord.trim(),
     displayWord: displayWord || rawWord.trim(),
-    meaning,
+    meaning: definition ?? '',
+    found: Boolean(definition),
     translation: translation ? translation.charAt(0).toUpperCase() + translation.slice(1) : undefined,
     translationLocale: options.homeLocale,
   };

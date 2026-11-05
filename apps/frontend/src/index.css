@@ -300,3 +300,33 @@ input[type="range"] {
   outline-offset: 4px !important;
 }
 
+/* Superficies planas de tarjeta (Card usa bg-[#FFFEF9], el Modo Enfoque usa
+   bg-white, la barra de control bg-sun/20…): en HC oscuro el texto hereda
+   blanco, así que el panel debe pasar a neutro o el contenido desaparece —
+   era el fallo del texto invisible en Modo Enfoque. */
+.theme-hc-dark [class*="bg-white"],
+[data-theme="hc-dark"] [class*="bg-white"] {
+  background-color: #121212 !important;
+}
+
+.theme-hc-dark [class*="bg-sun"],
+[data-theme="hc-dark"] [class*="bg-sun"] {
+  background-color: #121212 !important;
+}
+
+.theme-hc-dark [class*="bg-paper"],
+.theme-hc-dark [class*="bg-sky"],
+.theme-hc-dark [class*="bg-candy"],
+[data-theme="hc-dark"] [class*="bg-paper"],
+[data-theme="hc-dark"] [class*="bg-sky"],
+[data-theme="hc-dark"] [class*="bg-candy"] {
+  background-color: transparent !important;
+}
+
+/* Los matices «deep» (p. ej. coral-deep de la etiqueta «Modo Enfoque») son
+   parientes oscuros del acento y se hundían en el fondo negro. */
+.theme-hc-dark [class*="text-coral-deep"],
+[data-theme="hc-dark"] [class*="text-coral-deep"] {
+  color: #FFB27A !important;
+}
+

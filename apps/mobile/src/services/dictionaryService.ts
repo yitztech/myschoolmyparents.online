@@ -1,4 +1,5 @@
 import { ACCENT_FALLBACK, LOCAL_DEFINITIONS } from '../data/localDefinitions';
+import { activeMobileLocale, tr } from '../i18n';
 import { resolveTargetLanguage, translateWord } from './translationService';
 
 /** Definición y significado didáctico de una palabra. */
@@ -98,30 +99,21 @@ export function generateSpanishFallback(norm: string): WordDefinition {
   const base = { word: norm, displayWord: capitalize(norm) };
   const ends = (...s: string[]) => s.some((x) => norm.endsWith(x));
   if (ends('mente'))
-    return { ...base, partOfSpeech: 'adverbio', meaning: 'Expresa el modo, manera o forma en que se realiza una acción.' };
+    return { ...base, partOfSpeech: tr('book.dict.adverb'), meaning: tr('book.dict.meaningAdverb') };
   if (ends('ción', 'cion', 'sión', 'sion'))
-    return { ...base, partOfSpeech: 'sustantivo', meaning: 'Indica la acción, proceso o resultado de una actividad.' };
+    return { ...base, partOfSpeech: tr('book.dict.noun'), meaning: tr('book.dict.meaningNoun') };
   if (ends('dor', 'dora'))
-    return { ...base, partOfSpeech: 'sustantivo', meaning: 'Persona, objeto o elemento que ejecuta una función determinada.' };
+    return { ...base, partOfSpeech: tr('book.dict.noun'), meaning: tr('book.dict.meaningAgent') };
   if (ends('oso', 'osa'))
-    return {
-      ...base,
-      partOfSpeech: 'adjetivo',
-      meaning: 'Adjetivo que describe a alguien o algo que posee esa cualidad en abundancia.',
-    };
+    return { ...base, partOfSpeech: tr('book.dict.adjective'), meaning: tr('book.dict.meaningAbundant') };
   if (ends('ble'))
-    return {
-      ...base,
-      partOfSpeech: 'adjetivo',
-      meaning: 'Adjetivo que indica que algo se puede realizar o que tiene esa posibilidad.',
-    };
+    return { ...base, partOfSpeech: tr('book.dict.adjective'), meaning: tr('book.dict.meaningPossible') };
   if (ends('ar', 'er', 'ir'))
-    return { ...base, partOfSpeech: 'verbo', meaning: 'Verbo que describe una acción, estado o proceso en la historia.' };
+    return { ...base, partOfSpeech: tr('book.dict.verb'), meaning: tr('book.dict.meaningVerb') };
   return {
     ...base,
-    partOfSpeech: 'palabra',
-    meaning:
-      'Término destacado en la lectura. Observa cómo acompaña la oración y pulsa «Volver a escuchar» para oír su sonido.',
+    partOfSpeech: tr('book.dict.word'),
+    meaning: tr('book.dict.meaningGeneric'),
   };
 }
 
@@ -151,7 +143,7 @@ async function lookupWikipediaEs(norm: string): Promise<WordDefinition | null> {
     const first = extract.split(/\.\s+/)[0].trim();
     if (first) meaning = first.endsWith('.') ? first : `${first}.`;
   }
-  return meaning ? { word: norm, displayWord: capitalize(norm), partOfSpeech: 'significado', meaning } : null;
+  return meaning ? { word: norm, displayWord: capitalize(norm), partOfSpeech: tr('book.dict.meaningPos'), meaning } : null;
 }
 
 async function lookupFreeDictionaryEn(norm: string): Promise<WordDefinition | null> {
@@ -162,7 +154,7 @@ async function lookupFreeDictionaryEn(norm: string): Promise<WordDefinition | nu
   return {
     word: norm,
     displayWord: capitalize(norm),
-    partOfSpeech: meaning.partOfSpeech ?? 'palabra',
+    partOfSpeech: meaning.partOfSpeech ?? tr('book.dict.word'),
     meaning: def.definition ?? '',
     example: def.example ?? undefined,
   };
@@ -179,9 +171,9 @@ export async function lookup(
   const homeLocale = opts.homeLocale ?? 'es-MX';
   const learningLocale = opts.learningLocale ?? 'en-US';
   const norm = normalize(rawWord);
-  if (!norm) return { word: rawWord, displayWord: rawWord, partOfSpeech: '', meaning: 'Sin definición disponible.' };
+  if (!norm) return { word: rawWord, displayWord: rawWord, partOfSpeech: '', meaning: tr('book.dict.noDefinition') };
 
-  const key = `${norm}|${learningLocale}|${homeLocale}`;
+  const key = `${norm}|${learningLocale}|${homeLocale}|${activeMobileLocale()}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
@@ -205,8 +197,8 @@ export async function lookup(
       ? {
           word: norm,
           displayWord: capitalize(norm),
-          partOfSpeech: 'palabra',
-          meaning: `Palabra en ${learningLocale}. Pulsa «Volver a escuchar» para oír su pronunciación con el narrador.`,
+          partOfSpeech: tr('book.dict.word'),
+          meaning: tr('book.dict.wordInLanguage', { locale: learningLocale }),
         }
       : generateSpanishFallback(norm));
 

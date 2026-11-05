@@ -1,4 +1,5 @@
 import type { Book, ImportedPageData, Page, Paragraph } from '../db/schema';
+import { tr } from '../i18n';
 
 export const READING_MODE_FORMAT = 'myschool_reading_mode';
 export const READING_MODE_VERSION = 1;
@@ -21,10 +22,7 @@ export interface ExportPageInput {
 /** Construye el JSON de exportación («Modo Lectura»). Es puro: no toca disco ni base de datos. */
 export function buildExportJson(book: Book, paragraphs: Paragraph[], pages: ExportPageInput[]): string {
   if (paragraphs.length === 0) {
-    throw new EmptyReadingModeError(
-      'El libro aún no contiene párrafos procesados en Modo Lectura para exportar. ' +
-        'Asegúrate de haber aprobado al menos una página o importado texto.',
-    );
+    throw new EmptyReadingModeError(tr('library.emptyReadingMode'));
   }
   const exportedPages = pages.map(({ page, imageBase64 }) => ({
     id: page.id,
@@ -102,10 +100,10 @@ export async function parseImportJson(
   try {
     decoded = JSON.parse(jsonContent);
   } catch {
-    throw new InvalidReadingModeFormatError('El archivo no contiene un JSON válido.');
+    throw new InvalidReadingModeFormatError(tr('library.importInvalidJson'));
   }
   if (!isObject(decoded)) {
-    throw new InvalidReadingModeFormatError('El archivo JSON no tiene la estructura de objeto esperada.');
+    throw new InvalidReadingModeFormatError(tr('library.importInvalidStructure'));
   }
 
   const bookData: Record<string, any> = isObject(decoded.book) ? decoded.book : decoded;
@@ -140,7 +138,7 @@ export async function parseImportJson(
     });
   }
   if (parsed.length === 0) {
-    throw new InvalidReadingModeFormatError('El archivo no contiene párrafos legibles para el Modo Lectura.');
+    throw new InvalidReadingModeFormatError(tr('library.importNoParagraphs'));
   }
 
   const pagesData: (ImportedPageData & { originalId: string })[] = [];

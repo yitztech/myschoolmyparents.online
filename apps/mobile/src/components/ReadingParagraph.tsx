@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { AppText, Button } from './ui';
 import { fonts, colors } from '../theme';
+import { useT } from '../context/AppContext';
 import type { TextRange } from '../lib/textRanges';
 
 const WORD = /[\p{L}\p{N}]+(?:['’\-‐‑][\p{L}\p{N}]+)*/gu;
@@ -52,6 +53,7 @@ export function ReadingParagraph({
   onListenSelection: (excerpt: string, range: TextRange) => void;
   onSelection?: (range: TextRange | null) => void;
 }) {
+  const { t } = useT();
   const tokens = useMemo(() => tokenize(text), [text]);
   const [anchor, setAnchor] = useState<Token | null>(null);
   const [range, setRange] = useState<TextRange | null>(null);
@@ -84,7 +86,7 @@ export function ReadingParagraph({
 
   return (
     <View accessible={false}>
-      <Text accessibilityLabel="Texto de lectura. Toca una palabra para ver su significado; mantén pulsada una palabra para seleccionar." style={base}>
+      <Text accessibilityLabel={t('book.readingTextLabel')} style={base}>
         {tokens.map((t, i) => {
           if (!t.word) return t.text;
           const karaoke = within(activeWordRange, t);
@@ -111,9 +113,9 @@ export function ReadingParagraph({
       </Text>
       {range ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 6 }}>
-          {anchor ? <AppText style={{ fontSize: 12, color: colors.muted }}>Toca otra palabra para ampliar la selección.</AppText> : null}
-          <Button compact variant="tonal" icon="volume-up" label="Escuchar selección" onPress={() => onListenSelection(text.slice(range.start, range.end), range)} />
-          <Button compact variant="text" label="Quitar selección" onPress={clear} />
+          {anchor ? <AppText style={{ fontSize: 12, color: colors.muted }}>{t('book.extendSelection')}</AppText> : null}
+          <Button compact variant="tonal" icon="volume-up" label={t('book.listenSelection')} onPress={() => onListenSelection(text.slice(range.start, range.end), range)} />
+          <Button compact variant="text" label={t('book.clearSelection')} onPress={clear} />
         </View>
       ) : null}
     </View>

@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthLayout } from '../components/AuthLayout';
 import { AppText, Banner, Button, TextField } from '../components/ui';
-import { useApp } from '../context/AppContext';
+import { useApp, useT } from '../context/AppContext';
 import { AuthError } from '../services/auth';
 import { validateConfirmPassword, validateEmail, validateName, validatePassword } from '../lib/validators';
 import { AcceptTerms } from '../components/LegalLinks';
@@ -11,6 +11,7 @@ import type { AuthStackParams } from '../navigation/types';
 
 export function RegisterScreen({ navigation }: NativeStackScreenProps<AuthStackParams, 'Register'>) {
   const { auth } = useApp();
+  const { t } = useT();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,20 +34,20 @@ export function RegisterScreen({ navigation }: NativeStackScreenProps<AuthStackP
     try {
       await auth.registerWithEmail(name, email, password);
     } catch (e) {
-      setError(e instanceof AuthError ? e.message : 'No se pudo crear la cuenta. Inténtalo de nuevo.');
+      setError(e instanceof AuthError ? e.message : t('auth.registerFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <AuthLayout title="Crea tu cuenta" subtitle="Guarda tus libros y sigue donde te quedaste.">
+    <AuthLayout title={t('auth.registerTitle')} subtitle={t('auth.registerSubtitle')}>
       {error ? <Banner message={error} /> : null}
-      <TextField label="Nombre" icon="person-outline" placeholder="Ej. María García" autoComplete="name" value={name} onChangeText={setName} error={errors.name} />
+      <TextField label={t('auth.nameLabel')} icon="person-outline" placeholder={t('auth.namePlaceholder')} autoComplete="name" value={name} onChangeText={setName} error={errors.name} />
       <TextField
-        label="Correo electrónico"
+        label={t('auth.emailLabel')}
         icon="mail-outline"
-        placeholder="tucorreo@ejemplo.com"
+        placeholder={t('auth.emailPlaceholder')}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
@@ -56,19 +57,19 @@ export function RegisterScreen({ navigation }: NativeStackScreenProps<AuthStackP
         error={errors.email}
       />
       <TextField
-        label="Contraseña"
+        label={t('auth.passwordLabel')}
         icon="lock-outline"
         secure
         autoCapitalize="none"
         autoCorrect={false}
         autoComplete="new-password"
-        helper="Mínimo 8 caracteres, con mayúscula, minúscula, número y símbolo."
+        helper={t('auth.passwordHelper')}
         value={password}
         onChangeText={setPassword}
         error={errors.password}
       />
       <TextField
-        label="Confirmar contraseña"
+        label={t('auth.confirmPasswordLabel')}
         icon="lock-outline"
         secure
         autoCapitalize="none"
@@ -78,11 +79,11 @@ export function RegisterScreen({ navigation }: NativeStackScreenProps<AuthStackP
         error={errors.confirm}
         onSubmitEditing={submit}
       />
-      <Button label="Crear cuenta" busy={busy} onPress={submit} />
+      <Button label={t('auth.createAccount')} busy={busy} onPress={submit} />
       <AcceptTerms />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <AppText>¿Ya tienes cuenta?</AppText>
-        <Button label="Iniciar sesión" variant="text" compact disabled={busy} onPress={() => navigation.goBack()} />
+        <AppText>{t('auth.hasAccountQuestion')}</AppText>
+        <Button label={t('auth.signInLink')} variant="text" compact disabled={busy} onPress={() => navigation.goBack()} />
       </View>
     </AuthLayout>
   );

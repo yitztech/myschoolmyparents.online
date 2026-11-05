@@ -1,6 +1,8 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MOBILE_LOCALES, type MobileLocale } from '../i18n';
+import { useT } from '../context/AppContext';
+import { colors, radius } from '../theme';
 
 interface Props {
   visible: boolean;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function LanguageSwitcherModal({ visible, currentLocale, onSelect, onClose }: Props) {
+  const { t } = useT();
   const currentHeader =
     MOBILE_LOCALES.find((l) => l.code === currentLocale)?.header ?? MOBILE_LOCALES[0].header;
 
@@ -36,7 +39,7 @@ export function LanguageSwitcherModal({ visible, currentLocale, onSelect, onClos
                     onClose();
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel={`${item.label} ${isSelected ? '(seleccionado)' : ''}`}
+                  accessibilityLabel={isSelected ? t('library.localeSelected', { language: item.label }) : item.label}
                 >
                   <View style={styles.labelGroup}>
                     <Text style={styles.flag}>{item.flag}</Text>
@@ -64,30 +67,27 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     maxWidth: 340,
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.outline,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
   },
   headerBox: {
-    backgroundColor: '#f8fafc',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    backgroundColor: colors.surfaceMid,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.outline,
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
   headerText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#64748b',
+    color: colors.muted,
     letterSpacing: 0.5,
   },
   list: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
   },
   row: {
     flexDirection: 'row',
@@ -99,10 +99,10 @@ const styles = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.outlineVariant,
   },
   rowSelected: {
-    backgroundColor: '#fafaf9',
+    backgroundColor: colors.selected,
   },
   labelGroup: {
     flexDirection: 'row',
@@ -114,16 +114,16 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    color: '#334155',
+    color: colors.textSoft,
     fontWeight: '500',
   },
   labelSelected: {
-    color: '#78350f',
+    color: colors.selectedText,
     fontWeight: '700',
   },
   checkmark: {
     fontSize: 18,
-    color: '#78350f',
+    color: colors.selectedText,
     fontWeight: 'bold',
   },
 });

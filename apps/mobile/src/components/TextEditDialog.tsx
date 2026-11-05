@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Dialog, TextField } from './ui';
+import { useT } from '../context/AppContext';
 
 /** Editor de texto multilínea: los párrafos se separan con una línea en blanco. */
 export function TextEditDialog({
@@ -19,6 +20,7 @@ export function TextEditDialog({
   onCancel: () => void;
   onConfirm: (text: string) => void;
 }) {
+  const { t } = useT();
   const [text, setText] = useState(initial);
   useEffect(() => {
     if (visible) setText(initial);
@@ -30,7 +32,7 @@ export function TextEditDialog({
       onClose={onCancel}
       actions={
         <>
-          <Button label="Cancelar" variant="text" onPress={onCancel} />
+          <Button label={t('cancel')} variant="text" onPress={onCancel} />
           <Button label={confirmLabel} onPress={() => onConfirm(text)} />
         </>
       }

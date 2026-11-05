@@ -1,4 +1,5 @@
 import type { AppDatabase } from '../db/database';
+import { tr } from '../i18n';
 import type { OcrOutput } from './ocrQueue';
 
 export interface PdfImportConfig {
@@ -51,7 +52,7 @@ export async function importPdfPages(
     let raw = '';
     let cover: string | undefined;
     for (let idx = cfg.startPage; idx <= cfg.endPage; idx++) {
-      deps.onProgress?.(`Leyendo página ${idx - cfg.startPage + 1} de ${total}…`);
+      deps.onProgress?.(tr('capture.pdfReadingPage', { current: idx - cfg.startPage + 1, total }));
       const target = deps.capturesPath(`${deps.newId()}_pdf_${idx}`);
       const result = await deps.processPage(pdfPath, idx, target);
       cover ??= result.imagePath ?? target;
@@ -70,7 +71,7 @@ export async function importPdfPages(
 
   let count = 0;
   for (let idx = cfg.startPage; idx <= cfg.endPage; idx++) {
-    deps.onProgress?.(`Procesando página ${idx - cfg.startPage + 1} de ${total}…`);
+    deps.onProgress?.(tr('capture.pdfProcessingPage', { current: idx - cfg.startPage + 1, total }));
     const pageId = `${deps.newId()}_pdf_${idx}`;
     const jobId = `${pageId}_job`;
     const target = deps.capturesPath(pageId);

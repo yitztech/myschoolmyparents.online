@@ -1,42 +1,42 @@
 import { Platform } from 'react-native';
 
-/** Paleta heredada de la app Flutter (Material 3 con semilla azul #1d4ed8 y papel cálido). */
+/** Estética de cuaderno de la web: papel cálido, tinta y acentos de la marca (apps/frontend/src/index.css). */
 export const colors = {
-  primary: '#1d4ed8',
-  onPrimary: '#ffffff',
-  primaryContainer: '#dbeafe',
-  onPrimaryContainer: '#1e3a8a',
-  secondary: '#d97706',
-  secondaryContainer: '#fef3c7',
-  onSecondaryContainer: '#78350f',
-  tertiary: '#059669',
-  tertiaryContainer: '#d1fae5',
-  onTertiaryContainer: '#064e3b',
-  surface: '#fdfbf7',
-  onSurface: '#1e293b',
-  surfaceLow: '#f8f4ec',
-  surfaceMid: '#f2ede2',
-  card: '#ffffff',
-  outline: '#cbd5e1',
-  outlineVariant: '#e8e2d8',
-  cardBorder: '#ede6db',
-  inputBorder: '#e2d9cd',
-  accent: '#f59e0b',
-  error: '#b3261e',
-  errorContainer: '#fee2e2',
-  onErrorContainer: '#7f1d1d',
-  success: '#15803d',
-  muted: '#64748b',
-  subtle: '#94a3b8',
-  text: '#1e293b',
-  textSoft: '#334155',
-  highlight: '#fde68a',
-  selected: '#fef3c7',
-  selectedText: '#92400e',
-  info: '#0284c7',
-  infoContainer: '#f0f9ff',
-  infoBorder: '#bae6fd',
-  scrim: 'rgba(15,23,42,0.45)',
+  primary: '#B9320A',
+  onPrimary: '#FFFFFF',
+  primaryContainer: '#FDEDC7',
+  onPrimaryContainer: '#262134',
+  secondary: '#FFC52E',
+  secondaryContainer: '#FDEDC7',
+  onSecondaryContainer: '#262134',
+  tertiary: '#0E7C5A',
+  tertiaryContainer: '#D7EFE6',
+  onTertiaryContainer: '#0A5941',
+  surface: '#FFF6E9',
+  onSurface: '#262134',
+  surfaceLow: '#FFF6E9',
+  surfaceMid: '#FDEDC7',
+  card: '#FFFEF9',
+  outline: '#262134',
+  outlineVariant: '#E3D3B5',
+  cardBorder: '#262134',
+  inputBorder: '#262134',
+  accent: '#FF4D1C',
+  error: '#B3261E',
+  errorContainer: '#FBE3DF',
+  onErrorContainer: '#7A1D15',
+  success: '#0E7C5A',
+  muted: '#5C5570',
+  subtle: '#736B84',
+  text: '#262134',
+  textSoft: '#3D3650',
+  highlight: '#FFC52E',
+  selected: '#FDEDC7',
+  selectedText: '#262134',
+  info: '#0E6A8A',
+  infoContainer: '#E8F7FC',
+  infoBorder: '#BFE6F5',
+  scrim: 'rgba(38,33,52,0.45)',
 } as const;
 
 export const radius = { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 } as const;
@@ -44,9 +44,10 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
 export const fonts = { regular: 'Nunito', italic: 'Nunito-Italic' } as const;
 
+/** Sombra desplazada sin difuminar, como en la web. Android no admite sombras duras: allí solo queda el borde. */
 export const shadow = Platform.select({
-  ios: { shadowColor: '#0f172a', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  default: { elevation: 2 },
+  ios: { shadowColor: colors.text, shadowOpacity: 1, shadowRadius: 0, shadowOffset: { width: 4, height: 4 } },
+  default: { elevation: 0 },
 }) as object;
 
 /** Temas de las portadas de libros (lomo, insignia, icono), elegidos por hash del libro. */
