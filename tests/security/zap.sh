@@ -9,9 +9,10 @@ cd "$(dirname "$0")/../.."
 
 export COMPOSE_PROJECT_NAME="zap-${GITHUB_RUN_ID:-local}"
 export IMAGE_PREFIX=local/msmp IMAGE_TAG=zap
-export POSTGRES_PASSWORD=zap-db JWT_SECRET=zap-jwt-secret-solo-para-pruebas-0123456789
+# Credenciales aleatorias en cada ejecución: ninguna queda escrita en el repositorio
+export POSTGRES_PASSWORD="$(openssl rand -hex 16)" JWT_SECRET="$(openssl rand -hex 32)"
 export SITE_URL=http://localhost TRUSTED_PROXY_CIDR=127.0.0.1/32
-export SMTP_HOST=localhost SMTP_USER=zap SMTP_PASSWORD=zap MAIL_FROM=zap@example.test
+export SMTP_HOST=localhost SMTP_USER=zap SMTP_PASSWORD="$(openssl rand -hex 16)" MAIL_FROM=zap@example.test
 compose=(docker compose -f docker-compose.prod.yml)
 
 cleanup() { "${compose[@]}" down -v --remove-orphans >/dev/null 2>&1 || true; }
