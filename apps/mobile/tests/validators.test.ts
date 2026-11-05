@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateConfirmPassword, validateEmail, validateName, validatePassword } from '../src/lib/validators.ts';
+import { validateBookTitle, validateConfirmPassword, validateEmail, validateName, validatePassword } from '../src/lib/validators.ts';
 
 test('nombre', () => {
   assert.equal(validateName(''), 'Escribe tu nombre.');
@@ -24,4 +24,9 @@ test('confirmación', () => {
   assert.equal(validateConfirmPassword('', 'x'), 'Repite la contraseña.');
   assert.equal(validateConfirmPassword('y', 'x'), 'Las contraseñas no coinciden.');
   assert.equal(validateConfirmPassword('x', 'x'), null);
+});
+test('título del libro: obligatorio y hasta 150 caracteres', () => {
+  assert.equal(validateBookTitle('   '), 'El título no puede estar vacío.');
+  assert.equal(validateBookTitle('a'.repeat(150)), null);
+  assert.equal(validateBookTitle('a'.repeat(151)), 'El título no puede superar los 150 caracteres.');
 });

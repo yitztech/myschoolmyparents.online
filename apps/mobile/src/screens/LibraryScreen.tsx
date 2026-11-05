@@ -11,6 +11,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery';
 import type { Book } from '../db/schema';
 import { MOBILE_STRINGS } from '../i18n';
 import { displayVersion } from '../lib/appVersion';
+import { validateBookTitle } from '../lib/validators';
 import { importBookFromFile, exportBookToFile, NO_FILE } from '../services/bookFiles';
 import { colors, bookTheme, friendlyLocale, LOCALES, radius } from '../theme';
 import type { AppStackParams } from '../navigation/types';
@@ -42,6 +43,7 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
   const [createOpen, setCreateOpen] = useState(false);
   const [cloudOpen, setCloudOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Book | null>(null);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const [editing, setEditing] = useState<Book | null>(null);
   const [exported, setExported] = useState<{ book: Book; fileName: string; filePath?: string; paragraphs: number; pages: number } | null>(null);
   const isGuest = user?.isGuest === true;
@@ -116,7 +118,7 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
         <AppText style={{ fontSize: 12, fontWeight: '600' }}>{isGuest ? 'Local' : 'Nube'}</AppText>
       </Pressable>
       <IconButton icon="file-download" label="Importar libro (Modo Lectura)" onPress={() => void importBook()} />
-      <IconButton icon="logout" label="Cerrar sesión" onPress={() => void auth.signOut()} />
+      <IconButton icon="logout" label="Cerrar sesión" onPress={() => setLogoutOpen(true)} />
     </View>
   );
 
@@ -246,6 +248,17 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
         />
       ) : null}
       <ConfirmDialog
+        visible={logoutOpen}
+        title={t.logoutTitle}
+        message={t.logoutMessage}
+        confirmLabel={t.logoutConfirm}
+        onCancel={() => setLogoutOpen(false)}
+        onConfirm={() => {
+          setLogoutOpen(false);
+          void auth.signOut();
+        }}
+      />
+      <ConfirmDialog
         visible={toDelete !== null}
         title={`¿Eliminar «${toDelete?.title ?? ''}»?`}
         message="Se eliminarán sus textos locales. Esta acción no se puede deshacer desde la app."
@@ -294,7 +307,7 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
             <AppText style={{ lineHeight: 20 }}>
               El libro «{exported.book.title}» quedó exportado en formato JSON universal de Modo Lectura compatible.
             </AppText>
-            <View style={{ backgroundColor: '#f1f5f9', borderRadius: radius.sm, padding: 10 }}>
+            <View style={{ backgroundColor: colors.surfaceMid, borderRadius: radius.sm, padding: 10 }}>
               <AppText style={{ fontSize: 12 }}>Archivo: {exported.fileName}</AppText>
             </View>
             <AppText style={{ fontSize: 12, color: colors.muted }}>
@@ -310,8 +323,9 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
 function CreateBookDialog({ visible, onClose, onCreate }: { visible: boolean; onClose: () => void; onCreate: (title: string, learning: string) => void }) {
   const [title, setTitle] = useState('');
   const [learning, setLearning] = useState('en-US');
+  const titleError = title.trim() ? validateBookTitle(title) : null;
   const submit = () => {
-    if (!title.trim()) return;
+    if (!title.trim() || titleError) return;
     onCreate(title.trim(), learning);
     setTitle('');
   };
@@ -323,12 +337,12 @@ function CreateBookDialog({ visible, onClose, onCreate }: { visible: boolean; on
       actions={
         <>
           <Button label="Cancelar" variant="text" onPress={onClose} />
-          <Button label="Crear" disabled={!title.trim()} onPress={submit} />
+          <Button label="Crear" disabled={!title.trim() || titleError !== null} onPress={submit} />
         </>
       }
     >
       <View style={{ gap: 14, paddingVertical: 4 }}>
-        <TextField label="Título del libro" placeholder="Ej. Harry Potter, Ciencias Naturales..." value={title} onChangeText={setTitle} autoFocus onSubmitEditing={submit} />
+        <TextField label="Título del libro" placeholder="Ej. Harry Potter, Ciencias Naturales..." value={title} onChangeText={setTitle} error={titleError} autoFocus onSubmitEditing={submit} />
         <OptionPicker label="Idioma del libro (para voz)" value={learning} options={CREATE_LOCALES} onChange={setLearning} />
       </View>
     </Dialog>

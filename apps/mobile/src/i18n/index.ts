@@ -45,6 +45,9 @@ export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
     cameraDenied: 'Necesitamos permiso para usar la cámara. Puedes activarlo en los ajustes del teléfono.',
     noVoiceFor: 'No hay voz para {language}.',
     configureVoice: 'Configurar',
+    logoutTitle: '¿Cerrar sesión?',
+    logoutMessage: 'Para sincronizar tendrás que volver a iniciar sesión.',
+    logoutConfirm: 'Cerrar sesión',
   },
   en: {
     booksTitle: 'My books',
@@ -62,6 +65,9 @@ export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
     cameraDenied: 'We need permission to use the camera. You can turn it on in your phone settings.',
     noVoiceFor: 'No voice for {language}.',
     configureVoice: 'Set up',
+    logoutTitle: 'Sign out?',
+    logoutMessage: 'To sync, you will need to sign in again.',
+    logoutConfirm: 'Sign out',
   },
   pt: {
     booksTitle: 'Meus livros',
@@ -79,6 +85,9 @@ export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
     cameraDenied: 'Precisamos de permissão para usar a câmera. Pode ativá-la nas configurações do telefone.',
     noVoiceFor: 'Não há voz para {language}.',
     configureVoice: 'Configurar',
+    logoutTitle: 'Sair da conta?',
+    logoutMessage: 'Para sincronizar, será preciso entrar de novo.',
+    logoutConfirm: 'Sair',
   },
   de: {
     booksTitle: 'Meine Bücher',
@@ -96,6 +105,9 @@ export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
     cameraDenied: 'Wir benötigen die Berechtigung für die Kamera. Sie können sie in den Telefoneinstellungen aktivieren.',
     noVoiceFor: 'Keine Stimme für {language}.',
     configureVoice: 'Einrichten',
+    logoutTitle: 'Abmelden?',
+    logoutMessage: 'Zum Synchronisieren müssen Sie sich erneut anmelden.',
+    logoutConfirm: 'Abmelden',
   },
   fr: {
     booksTitle: 'Mes livres',
@@ -113,5 +125,8 @@ export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
     cameraDenied: 'L\'application a besoin de l\'autorisation d\'utiliser l\'appareil photo. Vous pouvez l\'activer dans les réglages du téléphone.',
     noVoiceFor: 'Aucune voix pour {language}.',
     configureVoice: 'Configurer',
+    logoutTitle: 'Se déconnecter ?',
+    logoutMessage: 'Pour synchroniser, vous devrez vous reconnecter.',
+    logoutConfirm: 'Se déconnecter',
   },
 };
