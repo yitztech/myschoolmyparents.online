@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { AuthError } from '../services/auth';
 import { validateConfirmPassword, validateEmail, validatePassword } from '../lib/validators';
 import type { AuthStackParams } from '../navigation/types';
+import { colors } from '../theme';
 
 /** Recuperación en dos pasos: el backend envía un código de 6 dígitos al correo (vale 15 min). */
 export function RecoverScreen({ navigation }: NativeStackScreenProps<AuthStackParams, 'Recover'>) {
@@ -94,7 +95,7 @@ export function RecoverScreen({ navigation }: NativeStackScreenProps<AuthStackPa
         </>
       ) : null}
       {step === 'done' ? (
-        <Card tint="#d1fae5">
+        <Card tint={colors.tertiaryContainer}>
           <AppText style={{ fontWeight: '800', fontSize: 17 }}>Contraseña actualizada</AppText>
           <AppText style={{ marginTop: 6 }}>Ya puedes iniciar sesión con tu contraseña nueva.</AppText>
         </Card>

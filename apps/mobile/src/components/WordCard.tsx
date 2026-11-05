@@ -51,15 +51,15 @@ export function WordCard({
       ) : (
         <View style={{ gap: 10 }}>
           {def.partOfSpeech ? (
-            <View style={{ alignSelf: 'flex-start', backgroundColor: colors.secondaryContainer, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 0.8, borderColor: '#fcd34d' }}>
+            <View style={{ alignSelf: 'flex-start', backgroundColor: colors.secondaryContainer, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 0.8, borderColor: colors.secondary }}>
               <AppText style={{ fontSize: 11, fontWeight: '700', color: colors.selectedText }}>{def.partOfSpeech}</AppText>
             </View>
           ) : null}
           {def.translation ? (
             <View style={{ backgroundColor: colors.infoContainer, borderRadius: 10, borderWidth: 1, borderColor: colors.infoBorder, padding: 10 }}>
-              <AppText style={{ fontSize: 12.5, color: '#0369a1', fontWeight: '600' }}>
+              <AppText style={{ fontSize: 12.5, color: colors.info, fontWeight: '600' }}>
                 Traducción ({getLanguageName(def.translationLocale ?? '')}):{' '}
-                <AppText style={{ fontWeight: '800', color: '#0c4a6e' }}>{def.translation}</AppText>
+                <AppText style={{ fontWeight: '800', color: colors.onPrimaryContainer }}>{def.translation}</AppText>
               </AppText>
             </View>
           ) : null}

@@ -51,11 +51,11 @@ export function Button({
 }) {
   const off = disabled || busy;
   const palette = {
-    filled: { bg: colors.primary, fg: colors.onPrimary, border: colors.primary },
-    tonal: { bg: colors.primaryContainer, fg: colors.onPrimaryContainer, border: colors.primaryContainer },
-    outlined: { bg: 'transparent', fg: colors.primary, border: colors.outline },
+    filled: { bg: colors.primary, fg: colors.onPrimary, border: colors.outline },
+    tonal: { bg: colors.primaryContainer, fg: colors.onPrimaryContainer, border: colors.outline },
+    outlined: { bg: colors.card, fg: colors.primary, border: colors.outline },
     text: { bg: 'transparent', fg: colors.primary, border: 'transparent' },
-    danger: { bg: colors.error, fg: '#fff', border: colors.error },
+    danger: { bg: colors.error, fg: colors.onPrimary, border: colors.outline },
   }[variant];
   return (
     <Pressable
@@ -106,11 +106,11 @@ export function IconButton({
       onPress={disabled ? undefined : onPress}
       style={({ pressed }) => [
         styles.iconButton,
-        filled && { backgroundColor: colors.primary, width: 46, height: 46, borderRadius: 23 },
+        filled && styles.iconButtonFilled,
         { opacity: disabled ? 0.35 : pressed ? 0.7 : 1 },
       ]}
     >
-      <Icon name={icon} size={size} color={filled ? '#fff' : (color ?? colors.text)} />
+      <Icon name={icon} size={size} color={filled ? colors.onPrimary : (color ?? colors.text)} />
     </Pressable>
   );
 }
@@ -136,7 +136,7 @@ export function Banner({ kind = 'error', message }: { kind?: 'error' | 'info'; m
       style={[styles.banner, { backgroundColor: error ? colors.errorContainer : colors.primaryContainer }]}
     >
       <Icon name={error ? 'error-outline' : 'info-outline'} size={20} color={error ? colors.onErrorContainer : colors.onPrimaryContainer} />
-      <AppText style={{ flex: 1, color: error ? colors.onErrorContainer : colors.onPrimaryContainer }}>{message}</AppText>
+      <AppText style={[styles.bannerText, { color: error ? colors.onErrorContainer : colors.onPrimaryContainer }]}>{message}</AppText>
     </View>
   );
 }
@@ -153,14 +153,9 @@ export function TextField({
   const [hidden, setHidden] = useState(!!secure);
   const [focused, setFocused] = useState(false);
   return (
-    <View style={[{ gap: 4 }, style as StyleProp<ViewStyle>]}>
+    <View style={[styles.fieldWrap, style as StyleProp<ViewStyle>]}>
       <AppText style={styles.fieldLabel}>{label}</AppText>
-      <View
-        style={[
-          styles.field,
-          { borderColor: error ? colors.error : focused ? colors.primary : colors.inputBorder, borderWidth: focused ? 2 : 1 },
-        ]}
-      >
+      <View style={[styles.field, { borderColor: error ? colors.error : focused ? colors.primary : colors.inputBorder }]}>
         {icon ? <Icon name={icon} size={20} color={colors.muted} /> : null}
         <TextInput
           accessibilityLabel={label}
@@ -187,7 +182,7 @@ export function TextField({
           />
         ) : null}
       </View>
-      {error ? <AppText style={{ color: colors.error, fontSize: 12 }}>{error}</AppText> : helper ? <AppText style={styles.helper}>{helper}</AppText> : null}
+      {error ? <AppText style={styles.fieldError}>{error}</AppText> : helper ? <AppText style={styles.helper}>{helper}</AppText> : null}
     </View>
   );
 }
@@ -217,7 +212,7 @@ export function Dialog({
             {title}
           </AppText>
           {scroll ? (
-            <ScrollView style={{ flexGrow: 0 }} keyboardShouldPersistTaps="handled">
+            <ScrollView style={styles.dialogScroll} keyboardShouldPersistTaps="handled">
               {children}
             </ScrollView>
           ) : (
@@ -259,7 +254,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      <AppText style={{ lineHeight: 21 }}>{message}</AppText>
+      <AppText style={styles.message}>{message}</AppText>
     </Dialog>
   );
 }
@@ -281,15 +276,15 @@ export function OptionPicker<T extends string | number>({
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
   return (
-    <View style={{ gap: 4 }}>
+    <View style={styles.fieldWrap}>
       <AppText style={styles.fieldLabel}>{label}</AppText>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${current?.label ?? ''}`}
         onPress={() => setOpen(true)}
-        style={[styles.field, { borderColor: colors.inputBorder, justifyContent: 'space-between' }]}
+        style={[styles.field, styles.fieldSelect]}
       >
-        <AppText style={{ flex: 1 }}>{current?.label ?? String(value)}</AppText>
+        <AppText style={styles.grow}>{current?.label ?? String(value)}</AppText>
         <Icon name="arrow-drop-down" size={24} color={colors.muted} />
       </Pressable>
       {helper ? <AppText style={styles.helper}>{helper}</AppText> : null}
@@ -306,7 +301,7 @@ export function OptionPicker<T extends string | number>({
             style={styles.option}
           >
             <Icon name={o.value === value ? 'radio-button-checked' : 'radio-button-unchecked'} size={22} color={colors.primary} />
-            <AppText style={{ flex: 1, fontWeight: o.value === value ? '800' : '500' }}>{o.label}</AppText>
+            <AppText style={[styles.grow, { fontWeight: o.value === value ? '800' : '500' }]}>{o.label}</AppText>
           </Pressable>
         ))}
       </Dialog>
@@ -353,7 +348,7 @@ export const styles = StyleSheet.create({
   button: {
     minHeight: 48,
     borderRadius: radius.md,
-    borderWidth: 1.2,
+    borderWidth: 2,
     paddingHorizontal: space.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -365,12 +360,20 @@ export const styles = StyleSheet.create({
   iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
   card: {
     backgroundColor: colors.card,
-    borderRadius: 18,
-    borderWidth: 1,
+    borderRadius: radius.md,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
     padding: space.lg,
     ...shadow,
   },
+  bannerText: { flex: 1 },
+  iconButtonFilled: { backgroundColor: colors.primary, width: 46, height: 46, borderRadius: 23 },
+  fieldWrap: { gap: 4 },
+  fieldError: { color: colors.error, fontSize: 12 },
+  fieldSelect: { justifyContent: 'space-between' },
+  dialogScroll: { flexGrow: 0 },
+  message: { lineHeight: 21 },
+  grow: { flex: 1 },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, alignSelf: 'flex-start' },
   banner: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.md, borderRadius: radius.md },
   fieldLabel: { fontSize: 13, fontWeight: '700', color: colors.textSoft },
@@ -380,16 +383,18 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.sm,
     paddingHorizontal: space.md,
-    borderRadius: 14,
-    backgroundColor: '#fff',
-    borderWidth: 1,
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
+    borderWidth: 2,
   },
   input: { flex: 1, fontFamily: fonts.regular, fontSize: 16, color: colors.text, paddingVertical: 10 },
   helper: { fontSize: 12, color: colors.muted },
   scrim: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', padding: space.xl },
   dialog: {
     backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.outline,
     padding: space.xl,
     gap: space.md,
     maxHeight: '88%',
