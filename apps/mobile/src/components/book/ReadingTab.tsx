@@ -1,5 +1,5 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useRef, type RefObject } from 'react';
+import { AccessibilityInfo, ScrollView, View, findNodeHandle } from 'react-native';
 import { AppText, Button, Card, Icon } from '../ui';
 import { ReadingParagraph } from '../ReadingParagraph';
 import type { Paragraph } from '../../db/schema';
@@ -32,6 +32,7 @@ export function ReadingTab({
   fontSize,
   canListen,
   onOpenVoiceSettings,
+  scrollRef,
   onExport,
   onGoPages,
   onWord,
@@ -44,12 +45,32 @@ export function ReadingTab({
   fontSize: number;
   canListen: boolean;
   onOpenVoiceSettings: () => void;
+  scrollRef: RefObject<ScrollView | null>;
   onExport: () => void;
   onGoPages: () => void;
   onWord: (index: number, range: TextRange) => void;
   onListenSelection: (index: number, excerpt: string, range: TextRange) => void;
 }) {
   const t = useStrings();
+  const paragraphViews = useRef(new Map<number, View>());
+  const activeIndex = snap.state === 'speaking' ? snap.activeParagraph : -1;
+
+  useEffect(() => {
+    const view = activeIndex >= 0 ? paragraphViews.current.get(activeIndex) : undefined;
+    const scroll = scrollRef.current;
+    const handle = scroll ? findNodeHandle(scroll) : null;
+    if (!view || !scroll || !handle) return;
+    view.measureLayout(
+      handle,
+      (_x, y) => {
+        void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) =>
+          scroll.scrollTo({ y: Math.max(0, y - 120), animated: !reduceMotion }),
+        );
+      },
+      () => undefined,
+    );
+  }, [activeIndex, scrollRef]);
+
   if (paragraphs.length === 0) {
     return (
       <EmptyState
@@ -85,6 +106,10 @@ export function ReadingTab({
     children.push(
       <View
         key={p.id}
+        ref={(el) => {
+          if (el) paragraphViews.current.set(index, el);
+          else paragraphViews.current.delete(index);
+        }}
         style={{
           paddingLeft: isActive ? 16 : 0,
           paddingVertical: isActive ? 10 : 0,

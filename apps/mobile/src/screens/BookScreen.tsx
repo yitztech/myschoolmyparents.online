@@ -53,6 +53,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
   const jobs = useLiveQuery(db, (d) => d.listJobs(bookId), [bookId], [] as ImportJob[]);
 
   const [tab, setTab] = useState<Tab>('read');
+  const readingScroll = useRef<ScrollView>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
@@ -450,7 +451,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
         />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.md, paddingBottom: 24, maxWidth: 900, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={readingScroll} contentContainerStyle={{ padding: space.lg, gap: space.md, paddingBottom: 24, maxWidth: 900, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
         <View accessibilityRole="tablist" style={{ flexDirection: 'row', backgroundColor: colors.surfaceMid, borderRadius: 14, padding: 4, gap: 4 }}>
           {TABS.map(({ key, icon }) => {
             const selected = tab === key;
@@ -480,6 +481,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
             fontSize={fontSize}
             canListen={canListen}
             onOpenVoiceSettings={() => void openTtsSettings()}
+            scrollRef={readingScroll}
             onExport={() => void exportBook()}
             onGoPages={() => setTab('pages')}
             onWord={onWord}
