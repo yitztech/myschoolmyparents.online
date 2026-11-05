@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_MOBILE_LOCALE, MOBILE_LOCALES, MOBILE_STRINGS, matchMobileLocale, isMobileLocale } from '../src/i18n/index.ts';
+import { DEFAULT_MOBILE_LOCALE, MOBILE_LOCALES, MOBILE_STRINGS, fillText, matchMobileLocale, isMobileLocale } from '../src/i18n/index.ts';
 
 test('el idioma del dispositivo se empareja con un idioma soportado', () => {
   assert.equal(matchMobileLocale('en'), 'en');
@@ -24,4 +24,9 @@ test('todos los idiomas tienen las mismas claves de texto', () => {
       assert.ok(MOBILE_STRINGS[code][key].trim().length > 0, `${code}.${key} vacío`);
     }
   }
+});
+
+test('las variables de un texto se rellenan y las desconocidas quedan visibles', () => {
+  assert.equal(fillText('No hay voz para {language}.', { language: 'Español' }), 'No hay voz para Español.');
+  assert.equal(fillText('Hola {name}', {}), 'Hola {name}');
 });

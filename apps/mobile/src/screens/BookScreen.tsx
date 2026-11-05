@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Alert, Linking, ScrollView, View } from 'react-native';
 import { File } from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -15,7 +15,7 @@ import { AppText, Banner, Button, Card, ConfirmDialog, Dialog, Icon, IconButton,
 import { BookViewTab } from '../components/book/BookViewTab';
 import { CaptureControls, DraftCard, PagesList, PendingBanner } from '../components/book/PagesTab';
 import { ReadingTab } from '../components/book/ReadingTab';
-import { useApp, useAppStateEffect } from '../context/AppContext';
+import { useApp, useAppStateEffect, useStrings } from '../context/AppContext';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import type { Book, ImportJob, Page, PageDraft, Paragraph } from '../db/schema';
 import type { ImageTransformOptions } from '../lib/imageTransform';
@@ -41,6 +41,7 @@ const newId = () => `${Date.now()}${Math.floor(Math.random() * 1000)}`;
 export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStackParams, 'Book'>) {
   const { bookId } = route.params;
   const { db } = useApp();
+  const t = useStrings();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { speech, snap } = useSpeech();
@@ -224,7 +225,14 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
     setBusy(true);
     setError(null);
     try {
-      const picked = camera ? await Media.takePhoto() : await Media.pickPhotos();
+      const { picked, denied } = camera ? await Media.takePhoto() : { picked: await Media.pickPhotos(), denied: false };
+      if (denied) {
+        Alert.alert(t.cameraDenied, undefined, [
+          { text: t.cancel, style: 'cancel' },
+          { text: t.openSettings, onPress: () => void Linking.openSettings() },
+        ]);
+        return;
+      }
       if (!picked || picked.uris.length === 0) {
         setProgress('No se añadieron fotos.');
         return;
@@ -461,6 +469,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
           })}
         </View>
         {error ? <Banner message={error} /> : null}
+        {snap.state === 'failed' && snap.error ? <Banner message={snap.error} /> : null}
 
         {tab === 'read' ? (
           <ReadingTab
@@ -470,6 +479,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
             snap={snap}
             fontSize={fontSize}
             canListen={canListen}
+            onOpenVoiceSettings={() => void openTtsSettings()}
             onExport={() => void exportBook()}
             onGoPages={() => setTab('pages')}
             onWord={onWord}

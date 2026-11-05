@@ -53,12 +53,12 @@ export type PickResult = { uris: string[] } | null;
 
 const PICK_OPTIONS = { mediaTypes: ['images'] as ImagePicker.MediaType[], quality: 0.9 };
 
-/** Foto con la cámara; null si se cancela o se deniega el permiso. */
-export async function takePhoto(): Promise<PickResult> {
+/** Foto con la cámara. `denied` indica que el permiso está denegado, distinto de cancelar. */
+export async function takePhoto(): Promise<{ picked: PickResult; denied: boolean }> {
   const perm = await ImagePicker.requestCameraPermissionsAsync();
-  if (!perm.granted) return null;
+  if (!perm.granted) return { picked: null, denied: true };
   const res = await ImagePicker.launchCameraAsync({ ...PICK_OPTIONS });
-  return res.canceled ? null : { uris: res.assets.map((a) => a.uri) };
+  return { picked: res.canceled ? null : { uris: res.assets.map((a) => a.uri) }, denied: false };
 }
 
 /** Varias fotos de la galería; null si se cancela. */

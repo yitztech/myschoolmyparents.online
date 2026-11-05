@@ -17,6 +17,9 @@ export const MOBILE_LOCALES: MobileLocaleOption[] = [
 
 export const DEFAULT_MOBILE_LOCALE: MobileLocale = 'es';
 
+export const fillText = (template: string, values: Record<string, string>) =>
+  template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
+
 export function isMobileLocale(value: unknown): value is MobileLocale {
   return MOBILE_LOCALES.some((l) => l.code === value);
 }
@@ -37,6 +40,11 @@ export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
     account: 'Cuenta',
     about: 'Acerca de',
     close: 'Cerrar',
+    cancel: 'Cancelar',
+    openSettings: 'Abrir ajustes',
+    cameraDenied: 'Necesitamos permiso para usar la cámara. Puedes activarlo en los ajustes del teléfono.',
+    noVoiceFor: 'No hay voz para {language}.',
+    configureVoice: 'Configurar',
   },
   en: {
     booksTitle: 'My books',
@@ -49,6 +57,11 @@ export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
     account: 'Account',
     about: 'About',
     close: 'Close',
+    cancel: 'Cancel',
+    openSettings: 'Open Settings',
+    cameraDenied: 'We need permission to use the camera. You can turn it on in your phone settings.',
+    noVoiceFor: 'No voice for {language}.',
+    configureVoice: 'Set up',
   },
   pt: {
     booksTitle: 'Meus livros',
@@ -61,6 +74,11 @@ export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
     account: 'Conta',
     about: 'Sobre',
     close: 'Fechar',
+    cancel: 'Cancelar',
+    openSettings: 'Abrir configurações',
+    cameraDenied: 'Precisamos de permissão para usar a câmera. Pode ativá-la nas configurações do telefone.',
+    noVoiceFor: 'Não há voz para {language}.',
+    configureVoice: 'Configurar',
   },
   de: {
     booksTitle: 'Meine Bücher',
@@ -73,6 +91,11 @@ export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
     account: 'Konto',
     about: 'Über',
     close: 'Schließen',
+    cancel: 'Abbrechen',
+    openSettings: 'Einstellungen öffnen',
+    cameraDenied: 'Wir benötigen die Berechtigung für die Kamera. Sie können sie in den Telefoneinstellungen aktivieren.',
+    noVoiceFor: 'Keine Stimme für {language}.',
+    configureVoice: 'Einrichten',
   },
   fr: {
     booksTitle: 'Mes livres',
@@ -85,5 +108,10 @@ export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
     account: 'Compte',
     about: 'À propos',
     close: 'Fermer',
+    cancel: 'Annuler',
+    openSettings: 'Ouvrir les réglages',
+    cameraDenied: 'L\'application a besoin de l\'autorisation d\'utiliser l\'appareil photo. Vous pouvez l\'activer dans les réglages du téléphone.',
+    noVoiceFor: 'Aucune voix pour {language}.',
+    configureVoice: 'Configurer',
   },
 };

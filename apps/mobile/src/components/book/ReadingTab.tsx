@@ -6,6 +6,8 @@ import type { Paragraph } from '../../db/schema';
 import type { SpeechSnapshot } from '../../speech/speechController';
 import type { TextRange } from '../../lib/textRanges';
 import { colors } from '../../theme';
+import { useStrings } from '../../context/AppContext';
+import { fillText } from '../../i18n';
 
 export const languageName = (locale: string) =>
   locale.startsWith('en') ? 'English' : locale.startsWith('es') ? 'Español' : locale;
@@ -29,6 +31,7 @@ export function ReadingTab({
   snap,
   fontSize,
   canListen,
+  onOpenVoiceSettings,
   onExport,
   onGoPages,
   onWord,
@@ -40,11 +43,13 @@ export function ReadingTab({
   snap: SpeechSnapshot;
   fontSize: number;
   canListen: boolean;
+  onOpenVoiceSettings: () => void;
   onExport: () => void;
   onGoPages: () => void;
   onWord: (index: number, range: TextRange) => void;
   onListenSelection: (index: number, excerpt: string, range: TextRange) => void;
 }) {
+  const t = useStrings();
   if (paragraphs.length === 0) {
     return (
       <EmptyState
@@ -128,6 +133,15 @@ export function ReadingTab({
         </AppText>
         <View style={{ height: 1, backgroundColor: colors.outlineVariant }} />
       </View>
+      {!canListen ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+          <Icon name="volume-off" size={18} color={colors.muted} />
+          <AppText style={{ flex: 1, fontSize: 13, color: colors.muted }}>
+            {fillText(t.noVoiceFor, { language: languageName(learningLocale) })}
+          </AppText>
+          <Button compact variant="outlined" label={t.configureVoice} onPress={onOpenVoiceSettings} />
+        </View>
+      ) : null}
       {children}
       <View style={{ alignSelf: 'center', backgroundColor: colors.tertiaryContainer, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, marginTop: 8 }}>
         <AppText style={{ fontWeight: '800', color: colors.onTertiaryContainer }}>🎉 ¡Fin de la lectura! Gran trabajo juntos</AppText>
