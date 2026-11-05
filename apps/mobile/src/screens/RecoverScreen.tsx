@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthLayout } from '../components/AuthLayout';
 import { AppText, Banner, Button, Card, TextField } from '../components/ui';
-import { useApp } from '../context/AppContext';
+import { useApp, useT } from '../context/AppContext';
 import { AuthError } from '../services/auth';
 import { validateConfirmPassword, validateEmail, validatePassword } from '../lib/validators';
 import type { AuthStackParams } from '../navigation/types';
@@ -11,6 +11,7 @@ import { colors } from '../theme';
 /** Recuperación en dos pasos: el backend envía un código de 6 dígitos al correo (vale 15 min). */
 export function RecoverScreen({ navigation }: NativeStackScreenProps<AuthStackParams, 'Recover'>) {
   const { auth } = useApp();
+  const { t } = useT();
   const [step, setStep] = useState<'email' | 'code' | 'done'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -26,7 +27,7 @@ export function RecoverScreen({ navigation }: NativeStackScreenProps<AuthStackPa
     try {
       await action();
     } catch (e) {
-      setError(e instanceof AuthError ? e.message : 'No se pudo completar la operación.');
+      setError(e instanceof AuthError ? e.message : t('auth.operationFailed'));
     } finally {
       setBusy(false);
     }
@@ -44,7 +45,7 @@ export function RecoverScreen({ navigation }: NativeStackScreenProps<AuthStackPa
 
   const reset = () => {
     const next = {
-      code: /^\d{6}$/.test(code.trim()) ? null : 'Escribe el código de 6 dígitos.',
+      code: /^\d{6}$/.test(code.trim()) ? null : t('validation.codeRequired'),
       password: validatePassword(password),
       confirm: validateConfirmPassword(confirm, password),
     };
@@ -57,14 +58,14 @@ export function RecoverScreen({ navigation }: NativeStackScreenProps<AuthStackPa
   };
 
   return (
-    <AuthLayout title="Recupera tu acceso" subtitle={step === 'email' ? 'Te enviamos un código para crear una contraseña nueva.' : 'Escribe el código y tu contraseña nueva.'}>
+    <AuthLayout title={t('auth.recoverTitle')} subtitle={step === 'email' ? t('auth.recoverSubtitleEmail') : t('auth.recoverSubtitleCode')}>
       {error ? <Banner message={error} /> : null}
       {step === 'email' ? (
         <>
           <TextField
-            label="Correo electrónico"
+            label={t('auth.emailLabel')}
             icon="mail-outline"
-            placeholder="tucorreo@ejemplo.com"
+            placeholder={t('auth.emailPlaceholder')}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -73,34 +74,34 @@ export function RecoverScreen({ navigation }: NativeStackScreenProps<AuthStackPa
             error={errors.email}
             onSubmitEditing={sendCode}
           />
-          <Button label="Enviar código" busy={busy} onPress={sendCode} />
+          <Button label={t('auth.sendCode')} busy={busy} onPress={sendCode} />
         </>
       ) : null}
       {step === 'code' ? (
         <>
-          <Banner kind="info" message={`Si hay una cuenta con ${email.trim()}, recibirás un código de 6 dígitos.`} />
-          <TextField label="Código" icon="pin" keyboardType="number-pad" maxLength={6} value={code} onChangeText={setCode} error={errors.code} />
+          <Banner kind="info" message={t('auth.codeSentInfo', { email: email.trim() })} />
+          <TextField label={t('auth.codeLabel')} icon="pin" keyboardType="number-pad" maxLength={6} value={code} onChangeText={setCode} error={errors.code} />
           <TextField
-            label="Contraseña nueva"
+            label={t('auth.newPasswordLabel')}
             icon="lock-outline"
             secure
             autoCapitalize="none"
-            helper="Mínimo 8 caracteres, con mayúscula, minúscula, número y símbolo."
+            helper={t('auth.passwordHelper')}
             value={password}
             onChangeText={setPassword}
             error={errors.password}
           />
-          <TextField label="Confirmar contraseña" icon="lock-outline" secure autoCapitalize="none" value={confirm} onChangeText={setConfirm} error={errors.confirm} onSubmitEditing={reset} />
-          <Button label="Cambiar contraseña" busy={busy} onPress={reset} />
+          <TextField label={t('auth.confirmPasswordLabel')} icon="lock-outline" secure autoCapitalize="none" value={confirm} onChangeText={setConfirm} error={errors.confirm} onSubmitEditing={reset} />
+          <Button label={t('auth.changePassword')} busy={busy} onPress={reset} />
         </>
       ) : null}
       {step === 'done' ? (
         <Card tint={colors.tertiaryContainer}>
-          <AppText style={{ fontWeight: '800', fontSize: 17 }}>Contraseña actualizada</AppText>
-          <AppText style={{ marginTop: 6 }}>Ya puedes iniciar sesión con tu contraseña nueva.</AppText>
+          <AppText style={{ fontWeight: '800', fontSize: 17 }}>{t('auth.passwordUpdatedTitle')}</AppText>
+          <AppText style={{ marginTop: 6 }}>{t('auth.passwordUpdatedBody')}</AppText>
         </Card>
       ) : null}
-      <Button label="Volver a iniciar sesión" variant={step === 'done' ? 'filled' : 'text'} disabled={busy} onPress={() => navigation.popToTop()} />
+      <Button label={t('auth.backToLogin')} variant={step === 'done' ? 'filled' : 'text'} disabled={busy} onPress={() => navigation.popToTop()} />
     </AuthLayout>
   );
 }

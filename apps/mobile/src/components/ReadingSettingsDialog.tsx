@@ -4,6 +4,7 @@ import Slider from '@react-native-community/slider';
 import { AppText, Button, Dialog, OptionPicker } from './ui';
 import type { AppVoice, SpeechSnapshot } from '../speech/speechController';
 import { LOCALES, colors } from '../theme';
+import { useT } from '../context/AppContext';
 
 const HOME_LOCALES = LOCALES.filter((l) => ['es-MX', 'es-ES', 'en-US'].includes(l.value));
 const baseLang = (locale: string) => locale.split('-')[0].toLowerCase();
@@ -38,31 +39,32 @@ export function ReadingSettingsDialog({
   onRate: (v: number) => void;
   onFontSize: (v: number) => void;
 }) {
+  const { t } = useT();
   const voices = snap.voices.filter((v) => baseLang(v.locale) === baseLang(learningLocale));
   const selected = snap.voice;
-  const rateLabel = snap.rate < 0.4 ? 'Lenta' : snap.rate > 0.6 ? 'Rápida' : 'Normal';
+  const rateLabel = snap.rate < 0.4 ? t('book.speedSlow') : snap.rate > 0.6 ? t('book.speedFast') : t('book.speedNormal');
   const clampRate = (v: number) => Math.round(Math.min(0.8, Math.max(0.2, v)) * 100) / 100;
 
   return (
-    <Dialog visible={visible} title="Configuración de lectura" onClose={onClose} actions={<Button label="Guardar y continuar" onPress={onClose} />}>
+    <Dialog visible={visible} title={t('book.readingSettingsTitle')} onClose={onClose} actions={<Button label={t('book.saveAndContinue')} onPress={onClose} />}>
       <View style={{ gap: 18, paddingVertical: 4 }}>
-        <AppText style={{ color: colors.muted }}>Idiomas, voz y velocidad del lector</AppText>
+        <AppText style={{ color: colors.muted }}>{t('book.settingsSubtitle')}</AppText>
 
         <OptionPicker
-          label="Idioma que vamos a leer (Libro)"
-          helper="Voz de lectura y diccionario interactivo al tocar palabras."
+          label={t('book.learningLanguage')}
+          helper={t('book.learningLanguageHelper')}
           value={learningLocale}
           options={LOCALES}
           onChange={onLearning}
         />
-        <OptionPicker label="Idioma nativo de la familia" helper="Idioma para explicaciones y traducciones de apoyo." value={homeLocale} options={HOME_LOCALES} onChange={onHome} />
+        <OptionPicker label={t('book.homeLanguage')} helper={t('book.homeLanguageHelper')} value={homeLocale} options={HOME_LOCALES} onChange={onHome} />
 
         <View style={{ gap: 8 }}>
-          <AppText style={{ fontWeight: '800', fontSize: 15 }}>Voz de lectura y pronunciación</AppText>
+          <AppText style={{ fontWeight: '800', fontSize: 15 }}>{t('book.voiceSectionTitle')}</AppText>
           {voices.length > 0 ? (
             <OptionPicker
-              label={`Voz para ${LOCALES.find((l) => l.value === learningLocale)?.label ?? learningLocale}`}
-              helper="Las voces locales funcionan sin conexión."
+              label={t('book.voiceFor', { language: LOCALES.find((l) => l.value === learningLocale)?.label ?? learningLocale })}
+              helper={t('book.voiceHelper')}
               value={selected?.id ?? ''}
               options={voices.map((v) => ({ value: v.id, label: `${v.name} (${v.locale})` }))}
               onChange={(id) => {
@@ -72,24 +74,24 @@ export function ReadingSettingsDialog({
             />
           ) : (
             <AppText style={{ color: colors.muted }}>
-              {snap.ready ? 'Activa una voz en Ajustes del teléfono para habilitar la lectura.' : 'Cargando voces…'}
+              {snap.ready ? t('book.enableVoice') : t('book.loadingVoices')}
             </AppText>
           )}
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Button compact variant="tonal" icon="record-voice-over" label="Probar voz" disabled={!selected} onPress={onTestVoice} />
-            <Button compact variant="outlined" icon="settings" label="Ajustes del teléfono" onPress={onTtsSettings} />
+            <Button compact variant="tonal" icon="record-voice-over" label={t('book.testVoice')} disabled={!selected} onPress={onTestVoice} />
+            <Button compact variant="outlined" icon="settings" label={t('book.phoneSettings')} onPress={onTtsSettings} />
           </View>
         </View>
 
         <View style={{ gap: 4 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <AppText style={{ fontWeight: '800', fontSize: 15 }}>Velocidad de lectura</AppText>
+            <AppText style={{ fontWeight: '800', fontSize: 15 }}>{t('book.speedTitle')}</AppText>
             <AppText style={{ fontWeight: '700', color: colors.primary }}>
-              {rateLabel} ({snap.rate.toFixed(2)})
+              {t('book.speedValue', { label: rateLabel, rate: snap.rate.toFixed(2) })}
             </AppText>
           </View>
           <Slider
-            accessibilityLabel="Velocidad de lectura"
+            accessibilityLabel={t('book.speedTitle')}
             minimumValue={0.2}
             maximumValue={0.8}
             step={0.05}
@@ -99,19 +101,19 @@ export function ReadingSettingsDialog({
             onSlidingComplete={(v) => onRate(clampRate(v))}
           />
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Button compact variant="outlined" label="Más lento" disabled={snap.rate <= 0.2} onPress={() => onRate(clampRate(snap.rate - 0.05))} />
-            <Button compact variant="tonal" label="Normal (0.45)" disabled={Math.abs(snap.rate - 0.45) < 0.005} onPress={() => onRate(0.45)} />
-            <Button compact variant="outlined" label="Más rápido" disabled={snap.rate >= 0.8} onPress={() => onRate(clampRate(snap.rate + 0.05))} />
+            <Button compact variant="outlined" label={t('book.slower')} disabled={snap.rate <= 0.2} onPress={() => onRate(clampRate(snap.rate - 0.05))} />
+            <Button compact variant="tonal" label={t('book.normalPreset')} disabled={Math.abs(snap.rate - 0.45) < 0.005} onPress={() => onRate(0.45)} />
+            <Button compact variant="outlined" label={t('book.faster')} disabled={snap.rate >= 0.8} onPress={() => onRate(clampRate(snap.rate + 0.05))} />
           </View>
         </View>
 
         <View style={{ gap: 4 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <AppText style={{ fontWeight: '800', fontSize: 15 }}>Tamaño de fuente del texto</AppText>
+            <AppText style={{ fontWeight: '800', fontSize: 15 }}>{t('book.fontSizeTitle')}</AppText>
             <AppText style={{ fontWeight: '700', color: colors.primary }}>{Math.round(fontSize)} pt</AppText>
           </View>
           <Slider
-            accessibilityLabel="Tamaño de fuente del texto"
+            accessibilityLabel={t('book.fontSizeTitle')}
             minimumValue={18}
             maximumValue={36}
             step={2}
@@ -120,7 +122,7 @@ export function ReadingSettingsDialog({
             thumbTintColor={colors.primary}
             onValueChange={onFontSize}
           />
-          <AppText style={{ fontSize: fontSize }}>Así se verá la lectura.</AppText>
+          <AppText style={{ fontSize: fontSize }}>{t('book.fontPreview')}</AppText>
         </View>
       </View>
     </Dialog>

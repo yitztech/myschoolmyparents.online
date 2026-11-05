@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, fonts, radius, shadow, space } from '../theme';
+import { useT } from '../context/AppContext';
 
 export type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -150,6 +151,7 @@ export function TextField({
   style,
   ...input
 }: TextInputProps & { label: string; error?: string | null; helper?: string; secure?: boolean; icon?: IconName }) {
+  const { t } = useT();
   const [hidden, setHidden] = useState(!!secure);
   const [focused, setFocused] = useState(false);
   return (
@@ -175,7 +177,7 @@ export function TextField({
         {secure ? (
           <IconButton
             icon={hidden ? 'visibility' : 'visibility-off'}
-            label={hidden ? 'Mostrar contraseña' : 'Ocultar contraseña'}
+            label={hidden ? t('common.showPassword') : t('common.hidePassword')}
             size={20}
             color={colors.muted}
             onPress={() => setHidden((h) => !h)}
@@ -203,10 +205,11 @@ export function Dialog({
   actions?: React.ReactNode;
   scroll?: boolean;
 }) {
+  const { t } = useT();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.scrim}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Cerrar diálogo" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={t('common.closeDialog')} />
         <View style={styles.dialog} accessibilityViewIsModal>
           <AppText accessibilityRole="header" style={styles.dialogTitle}>
             {title}
@@ -242,6 +245,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useT();
   return (
     <Dialog
       visible={visible}
@@ -249,7 +253,7 @@ export function ConfirmDialog({
       onClose={onCancel}
       actions={
         <>
-          <Button label="Cancelar" variant="text" onPress={onCancel} />
+          <Button label={t('cancel')} variant="text" onPress={onCancel} />
           <Button label={confirmLabel} variant={danger ? 'danger' : 'filled'} onPress={onConfirm} />
         </>
       }
@@ -273,6 +277,7 @@ export function OptionPicker<T extends string | number>({
   onChange: (v: T) => void;
   helper?: string;
 }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
   return (
@@ -288,7 +293,7 @@ export function OptionPicker<T extends string | number>({
         <Icon name="arrow-drop-down" size={24} color={colors.muted} />
       </Pressable>
       {helper ? <AppText style={styles.helper}>{helper}</AppText> : null}
-      <Dialog visible={open} title={label} onClose={() => setOpen(false)} actions={<Button label="Cerrar" variant="text" onPress={() => setOpen(false)} />}>
+      <Dialog visible={open} title={label} onClose={() => setOpen(false)} actions={<Button label={t('close')} variant="text" onPress={() => setOpen(false)} />}>
         {options.map((o) => (
           <Pressable
             key={String(o.value)}
@@ -317,11 +322,12 @@ export function ActionMenu({
   label: string;
   actions: { key: string; label: string; icon: IconName; danger?: boolean; disabled?: boolean; onPress: () => void }[];
 }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   return (
     <>
       <IconButton icon="more-vert" label={label} onPress={() => setOpen(true)} color={colors.muted} />
-      <Dialog visible={open} title={label} onClose={() => setOpen(false)} actions={<Button label="Cerrar" variant="text" onPress={() => setOpen(false)} />}>
+      <Dialog visible={open} title={label} onClose={() => setOpen(false)} actions={<Button label={t('close')} variant="text" onPress={() => setOpen(false)} />}>
         {actions.map((a) => (
           <Pressable
             key={a.key}

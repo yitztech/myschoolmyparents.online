@@ -1,5 +1,6 @@
 import { File } from 'expo-file-system';
 import * as MsmOcr from '../../modules/msm-ocr/src';
+import { tr } from '../i18n';
 import type { OcrOutput } from './ocrQueue';
 import type { PdfPageResult } from './pdfImport';
 
@@ -9,7 +10,7 @@ export type OcrEngineResult = OcrOutput & { engine: string };
 export async function recognize(uri: string): Promise<OcrEngineResult> {
   const file = new File(uri);
   if (!file.exists || file.size === 0) {
-    throw Object.assign(new Error(`El archivo para OCR no existe o está vacío: ${uri}`), { code: 'file_not_found' });
+    throw Object.assign(new Error(tr('capture.ocrFileMissing', { uri })), { code: 'file_not_found' });
   }
   const r = await MsmOcr.recognize(uri);
   return { rawText: r.rawText, paragraphs: r.paragraphs, engine: r.engine };

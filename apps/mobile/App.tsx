@@ -8,16 +8,17 @@ import { ToastProvider } from './src/components/Toast';
 import { AppText } from './src/components/ui';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme';
+import { tr } from './src/i18n';
 
 const Loading = () => (
   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface }}>
-    <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Cargando" />
+    <ActivityIndicator size="large" color={colors.primary} accessibilityLabel={tr('common.loading')} />
   </View>
 );
 
 const Failed = ({ error }: { error: string }) => (
   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, padding: 24 }}>
-    <AppText style={{ textAlign: 'center' }}>{`No se pudo abrir la biblioteca local.\n${error}`}</AppText>
+    <AppText style={{ textAlign: 'center' }}>{tr('library.openFailed', { error })}</AppText>
   </View>
 );
 

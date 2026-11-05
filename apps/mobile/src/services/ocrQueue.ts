@@ -1,5 +1,6 @@
 import type { AppDatabase } from '../db/database';
 import type { ImportJob } from '../db/schema';
+import { tr } from '../i18n';
 
 export interface OcrOutput {
   rawText: string;
@@ -61,7 +62,7 @@ export class OcrQueue {
     }
     await db.startJob(job.id);
     try {
-      this.deps.onProgress?.('Leyendo una página…');
+      this.deps.onProgress?.(tr('capture.readingOnePage'));
       const result = await this.deps.recognize(job.imagePath);
       await db.saveDraft({
         bookId: job.bookId,

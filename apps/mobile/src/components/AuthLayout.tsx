@@ -3,10 +3,12 @@ import { Image, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './ui';
 import { colors } from '../theme';
+import { useT } from '../context/AppContext';
 
 /** Envoltorio común de las pantallas de acceso: scroll, ancho limitado y cabecera con logo. */
 export function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
+  const { t } = useT();
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.surface }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
@@ -17,7 +19,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
           <Image
             source={require('../../assets/branding/my_school_my_parents_logo.png')}
             style={{ width: 72, height: 72, borderRadius: 20 }}
-            accessibilityLabel="Logotipo de MySchoolMyParents"
+            accessibilityLabel={t('auth.logoAlt')}
           />
           <View style={{ gap: 4 }}>
             <AppText accessibilityRole="header" style={{ fontSize: 28, fontWeight: '800' }}>

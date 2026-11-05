@@ -4,6 +4,7 @@ import { AppText, Button, Dialog } from './ui';
 import { lookup, type WordDefinition } from '../services/dictionaryService';
 import { getLanguageName } from '../services/translationService';
 import { colors, radius } from '../theme';
+import { useT } from '../context/AppContext';
 
 /** Ficha de una palabra: significado, traducción bilingüe, ejemplo y «Volver a escuchar». */
 export function WordCard({
@@ -19,6 +20,7 @@ export function WordCard({
   onClose: () => void;
   onListen: () => void;
 }) {
+  const { t } = useT();
   const [def, setDef] = useState<WordDefinition | null>(null);
 
   useEffect(() => {
@@ -41,13 +43,13 @@ export function WordCard({
       onClose={onClose}
       actions={
         <>
-          <Button label="Cerrar" variant="text" onPress={onClose} />
-          <Button label="Volver a escuchar" icon="volume-up" onPress={onListen} />
+          <Button label={t('close')} variant="text" onPress={onClose} />
+          <Button label={t('book.listenAgain')} icon="volume-up" onPress={onListen} />
         </>
       }
     >
       {!def ? (
-        <ActivityIndicator style={{ margin: 24 }} accessibilityLabel="Buscando significado" />
+        <ActivityIndicator style={{ margin: 24 }} accessibilityLabel={t('book.searchingMeaning')} />
       ) : (
         <View style={{ gap: 10 }}>
           {def.partOfSpeech ? (
@@ -58,17 +60,17 @@ export function WordCard({
           {def.translation ? (
             <View style={{ backgroundColor: colors.infoContainer, borderRadius: 10, borderWidth: 1, borderColor: colors.infoBorder, padding: 10 }}>
               <AppText style={{ fontSize: 12.5, color: colors.info, fontWeight: '600' }}>
-                Traducción ({getLanguageName(def.translationLocale ?? '')}):{' '}
+                {t('book.translationLabel', { language: getLanguageName(def.translationLocale ?? '') })}{' '}
                 <AppText style={{ fontWeight: '800', color: colors.onPrimaryContainer }}>{def.translation}</AppText>
               </AppText>
             </View>
           ) : null}
           <View>
-            <AppText style={{ fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 0.3 }}>Significado:</AppText>
+            <AppText style={{ fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 0.3 }}>{t('book.meaningLabel')}</AppText>
             <AppText style={{ fontSize: 14, lineHeight: 20, color: colors.textSoft, marginTop: 3 }}>{def.meaning}</AppText>
           </View>
           {def.example ? (
-            <AppText style={{ fontSize: 12.5, fontStyle: 'italic', color: colors.muted, borderRadius: radius.sm }}>Ejemplo: "{def.example}"</AppText>
+            <AppText style={{ fontSize: 12.5, fontStyle: 'italic', color: colors.muted, borderRadius: radius.sm }}>{t('book.exampleLabel', { example: def.example })}</AppText>
           ) : null}
         </View>
       )}

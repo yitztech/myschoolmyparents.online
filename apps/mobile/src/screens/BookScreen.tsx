@@ -15,7 +15,7 @@ import { AppText, Banner, Button, Card, ConfirmDialog, Dialog, Icon, IconButton,
 import { BookViewTab } from '../components/book/BookViewTab';
 import { CaptureControls, DraftCard, PagesList, PendingBanner } from '../components/book/PagesTab';
 import { ReadingTab } from '../components/book/ReadingTab';
-import { useApp, useAppStateEffect, useStrings } from '../context/AppContext';
+import { useApp, useAppStateEffect, useT } from '../context/AppContext';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import type { Book, ImportJob, Page, PageDraft, Paragraph } from '../db/schema';
 import type { ImageTransformOptions } from '../lib/imageTransform';
@@ -41,7 +41,7 @@ const newId = () => `${Date.now()}${Math.floor(Math.random() * 1000)}`;
 export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStackParams, 'Book'>) {
   const { bookId } = route.params;
   const { db } = useApp();
-  const t = useStrings();
+  const { t, p } = useT();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { speech, snap } = useSpeech();
@@ -95,7 +95,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
         speech.selectVoiceById(book.voiceId);
       } catch {
         // La lectura es opcional para importar páginas: un fallo del motor TTS no bloquea la pantalla.
-        setProgress('Texto listo. La lectura en voz alta no está disponible todavía en este dispositivo.');
+        setProgress(t('book.ttsUnavailable'));
       }
     })();
     (async () => {
@@ -125,20 +125,20 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
 
   // ───────────── lectura en voz alta ─────────────
   const texts = useMemo(() => paragraphs.map((p) => p.content), [paragraphs]);
-  const voiceError = (what: string) => setError(`${what} Revisa la voz instalada para ${learningLocale}.`);
+  const voiceError = (key: 'book.playFailed' | 'book.resumeFailed' | 'book.paragraphFailed') => setError(t(key, { locale: learningLocale }));
 
   const listenAll = async () => {
     try {
       await speech.play(texts);
     } catch {
-      voiceError('No se pudo reproducir.');
+      voiceError('book.playFailed');
     }
   };
   const listenParagraph = async (index: number, startOffset = 0) => {
     try {
       await speech.play([texts[index]], { startOffset, activeParagraphBase: index });
     } catch {
-      voiceError('No se pudo reproducir.');
+      voiceError('book.playFailed');
     }
   };
   const listenExcerpt = async (index: number, excerpt: string, range?: TextRange) => {
@@ -150,7 +150,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
       }
       await speech.play([excerpt], { activeParagraphBase: index, wordRange: resolved });
     } catch {
-      voiceError('No se pudo reproducir.');
+      voiceError('book.playFailed');
     }
   };
   const resumeSaved = async () => {
@@ -160,7 +160,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
     try {
       await speech.play(texts, { startParagraph: Math.min(Math.max(current.lastParagraph, 0), texts.length - 1), startOffset: current.lastOffset });
     } catch {
-      voiceError('No se pudo reanudar la lectura.');
+      voiceError('book.resumeFailed');
     }
   };
   const goToParagraph = async (target: number) => {
@@ -168,7 +168,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
     try {
       await speech.play(texts, { startParagraph: target });
     } catch {
-      voiceError('No se pudo cambiar de párrafo.');
+      voiceError('book.paragraphFailed');
     }
   };
   const playPause = () => {
@@ -197,7 +197,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
       await speech.selectVoice(v);
       await db.updateReadingPreferences(bookId, { voiceId: v.id });
     } catch {
-      setError('No se pudo activar esa voz.');
+      setError(t('book.voiceSelectFailed'));
     }
   };
   const setRate = async (value: number) => {
@@ -209,12 +209,12 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
     try {
       await speech.play([sample]);
     } catch {
-      setError('No se pudo reproducir la prueba de voz.');
+      setError(t('book.testVoiceFailed'));
     }
   };
   const openTtsSettings = async () => {
     if (!(await Ocr.openTtsSettings())) {
-      setError('No se pudo abrir los ajustes de voz. Ábrelos desde Ajustes > Administración general > Texto a voz.');
+      setError(t('book.ttsSettingsFailed'));
     }
   };
 
@@ -228,29 +228,29 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
     try {
       const { picked, denied } = camera ? await Media.takePhoto() : { picked: await Media.pickPhotos(), denied: false };
       if (denied) {
-        Alert.alert(t.cameraDenied, undefined, [
-          { text: t.cancel, style: 'cancel' },
-          { text: t.openSettings, onPress: () => void Linking.openSettings() },
+        Alert.alert(t('cameraDenied'), undefined, [
+          { text: t('cancel'), style: 'cancel' },
+          { text: t('openSettings'), onPress: () => void Linking.openSettings() },
         ]);
         return;
       }
       if (!picked || picked.uris.length === 0) {
-        setProgress('No se añadieron fotos.');
+        setProgress(t('book.noPhotosAdded'));
         return;
       }
       const options = await askImageOptions();
       if (!options) return;
       for (let i = 0; i < picked.uris.length; i++) {
-        setProgress(`Preparando foto ${i + 1} de ${picked.uris.length}…`);
+        setProgress(t('book.preparingPhoto', { index: i + 1, total: picked.uris.length }));
         const persisted = await Media.persistImage(picked.uris[i]);
         const adjusted = await Media.transformImage(persisted, options);
         const pageId = `${newId()}_${i}`;
         await db.createQueuedPage({ bookId, pageId, jobId: `${pageId}_job`, imagePath: adjusted });
       }
       const ok = await queue.run(bookId);
-      setProgress(ok ? `${picked.uris.length} foto(s) lista(s) para revisión.` : 'Algunas fotos no pudieron leerse. Revisa el estado de cada página.');
+      setProgress(ok ? p('book.photosReady', picked.uris.length) : t('book.somePhotosUnreadable'));
     } catch {
-      setError('No pudimos procesar una de las fotos. Puedes intentarlo otra vez.');
+      setError(t('book.photoFailed'));
     } finally {
       setBusy(false);
     }
@@ -260,15 +260,15 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
     if (busy) return;
     setBusy(true);
     setError(null);
-    setProgress('Procesando ejemplo…');
+    setProgress(t('book.processingSample'));
     try {
       const path = await Media.sampleImage();
       const pageId = newId();
       await db.createQueuedPage({ bookId, pageId, jobId: `${pageId}_job`, imagePath: path });
       const ok = await queue.run(bookId);
-      setProgress(ok ? 'Ejemplo listo para revisión.' : 'No pudimos leer el ejemplo. Revisa el estado de la página.');
+      setProgress(ok ? t('book.sampleReady') : t('book.sampleNotRead'));
     } catch {
-      setError('No pudimos procesar el ejemplo.');
+      setError(t('book.sampleFailed'));
     } finally {
       setBusy(false);
     }
@@ -278,17 +278,17 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
     if (busy) return;
     setBusy(true);
     setError(null);
-    setProgress('Seleccionando archivo PDF…');
+    setProgress(t('book.pickingPdf'));
     try {
       const picked = await File.pickFileAsync({ mimeTypes: ['application/pdf'] });
       if (picked.canceled) {
-        setProgress('No se seleccionó ningún archivo PDF.');
+        setProgress(t('book.pdfNotSelected'));
         return;
       }
-      setProgress('Analizando PDF…');
+      setProgress(t('book.analyzingPdf'));
       const total = await Ocr.getPdfPageCount(picked.result.uri);
       if (total <= 0) {
-        setError('El PDF no contiene páginas legibles.');
+        setError(t('book.pdfNoPages'));
         return;
       }
       if (total > 1) {
@@ -297,7 +297,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
       }
       await runPdfImport(picked.result.uri, { startPage: 0, endPage: 0, mergeTexts: false, autoApprove: false });
     } catch {
-      setError('No pudimos procesar el archivo PDF. Asegúrate de que sea un documento válido.');
+      setError(t('book.pdfFailed'));
     } finally {
       setBusy(false);
     }
@@ -313,15 +313,13 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
         cfg,
       );
       if (summary.merged) {
-        setProgress(
-          summary.approved ? `${summary.count} páginas del PDF unidas y añadidas al libro.` : `${summary.count} páginas del PDF unidas en un borrador listo para revisar.`,
-        );
+        setProgress(summary.approved ? p('book.pdfMergedAdded', summary.count) : p('book.pdfMergedDraft', summary.count));
       } else {
-        setProgress(summary.approved ? `${summary.count} páginas del PDF añadidas al libro.` : `${summary.count} página(s) de PDF listas para revisar.`);
+        setProgress(summary.approved ? p('book.pdfAdded', summary.count) : p('book.pdfReady', summary.count));
       }
       setTab(summary.approved ? 'read' : 'pages');
     } catch {
-      setError('No pudimos procesar el archivo PDF. Asegúrate de que sea un documento válido.');
+      setError(t('book.pdfFailed'));
     } finally {
       setBusy(false);
     }
@@ -329,47 +327,47 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
 
   // ───────────── borradores ─────────────
   const saveApproved = async (draft: PageDraft, list: string[]) => {
-    if (list.every((t) => !t.trim())) {
-      setError('La página no contiene texto para añadir.');
+    if (list.every((line) => !line.trim())) {
+      setError(t('book.pageNoText'));
       return;
     }
     await db.approveDraft(draft, list);
     setError(null);
-    setProgress('Página añadida al libro.');
+    setProgress(t('book.pageAdded'));
   };
   const approveDraft = async (draft: PageDraft) => {
     try {
       await saveApproved(draft, JSON.parse(draft.paragraphsJson) as string[]);
     } catch {
-      setError('No se pudo añadir esta página. Inténtalo de nuevo o usa «Editar texto».');
+      setError(t('book.approveFailed'));
     }
   };
   const retryDraft = async (draft: PageDraft) => {
     await db.retryJob(draft);
     await queue.run(bookId);
-    setProgress('Página marcada para reintento.');
+    setProgress(t('book.retryMarked'));
   };
   const approveAll = async () => {
     setBusy(true);
-    setProgress(`Añadiendo ${drafts.length} páginas al libro…`);
+    setProgress(p('book.addingPages', drafts.length));
     try {
       for (const draft of drafts) await db.approveDraft(draft, JSON.parse(draft.paragraphsJson) as string[]);
-      setProgress(`${drafts.length} páginas añadidas al libro.`);
+      setProgress(p('book.pagesAdded', drafts.length));
       setTab('read');
     } catch (e) {
-      setError(`Error al añadir páginas: ${e instanceof Error ? e.message : e}`);
+      setError(t('book.addPagesError', { reason: e instanceof Error ? e.message : String(e) }));
     } finally {
       setBusy(false);
     }
   };
   const mergeAll = async () => {
     setBusy(true);
-    setProgress(`Juntando ${drafts.length} páginas en una sola…`);
+    setProgress(p('book.mergingPages', drafts.length));
     try {
       const count = await mergeDrafts(db, bookId, newId);
-      setProgress(`${count} páginas unidas en un solo borrador listo para revisar.`);
+      setProgress(p('book.mergedDraft', count));
     } catch (e) {
-      setError(`Error al juntar páginas: ${e instanceof Error ? e.message : e}`);
+      setError(t('book.mergeError', { reason: e instanceof Error ? e.message : String(e) }));
     } finally {
       setBusy(false);
     }
@@ -388,12 +386,12 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
     if (!page) return;
     const list = splitParagraphs(text);
     if (list.length === 0) {
-      setError('La página no puede quedar sin texto.');
+      setError(t('book.pageEmpty'));
       return;
     }
     await db.updatePageParagraphs({ bookId, pageId: page.id, edited: list });
     setError(null);
-    setProgress('Texto de la página actualizado.');
+    setProgress(t('book.pageTextUpdated'));
   };
 
   const renameBook = async () => {
@@ -402,10 +400,10 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
   };
 
   const exportBook = async () => {
-    toast('Exportando libro en Modo Lectura...');
+    toast(t('book.exporting'));
     const result = await exportBookToFile(db, bookId);
-    if (!result.success) toast(result.errorMessage ?? 'No se pudo exportar el libro.', 'error');
-    else toast(`Libro exportado: ${result.fileName} (${result.totalParagraphs} párrafos).`, 'success');
+    if (!result.success) toast(result.errorMessage ?? t('book.exportFailed'), 'error');
+    else toast(p('book.exported', result.totalParagraphs, { fileName: result.fileName ?? '' }), 'success');
   };
 
   const onWord = useCallback((index: number, range: TextRange) => setWord({ index, range }), []);
@@ -420,14 +418,20 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
 
   const canListen = snap.voice !== null;
   const wordText = word ? (texts[word.index] ?? '').slice(word.range.start, word.range.end) : null;
-  const tabLabel = (t: Tab) =>
-    t === 'read' ? `Modo Lectura (${paragraphs.length})` : t === 'book' ? 'Ver Libro' : drafts.length > 0 ? `Páginas (${drafts.length} pend.)` : `Páginas (${pages.length})`;
+  const tabLabel = (key: Tab) =>
+    key === 'read'
+      ? t('book.tabRead', { count: paragraphs.length })
+      : key === 'book'
+        ? t('book.tabBook')
+        : drafts.length > 0
+          ? t('book.tabPagesPending', { count: drafts.length })
+          : t('book.tabPages', { count: pages.length });
 
   if (!book) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <AppText>No se encontró el libro.</AppText>
-        <Button label="Volver" variant="text" onPress={() => navigation.goBack()} />
+        <AppText>{t('book.notFound')}</AppText>
+        <Button label={t('book.back')} variant="text" onPress={() => navigation.goBack()} />
       </View>
     );
   }
@@ -435,15 +439,15 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
       <View style={{ paddingTop: insets.top + 4, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface }}>
-        <IconButton icon="arrow-back" label="Volver a la biblioteca" onPress={() => navigation.goBack()} />
+        <IconButton icon="arrow-back" label={t('book.backToLibrary')} onPress={() => navigation.goBack()} />
         <AppText accessibilityRole="header" numberOfLines={1} style={{ flex: 1, fontSize: 20, fontWeight: '800' }}>
           {book.title}
         </AppText>
-        <IconButton icon="tune" label="Configuración de lectura e idioma" onPress={() => setSettingsOpen(true)} />
-        <IconButton icon="ios-share" label="Exportar libro (Modo Lectura)" onPress={() => void exportBook()} />
+        <IconButton icon="tune" label={t('book.readingSettings')} onPress={() => setSettingsOpen(true)} />
+        <IconButton icon="ios-share" label={t('book.exportBook')} onPress={() => void exportBook()} />
         <IconButton
           icon="edit"
-          label="Renombrar libro"
+          label={t('book.renameBook')}
           onPress={() => {
             setRenameText(book.title);
             setRenaming(true);
@@ -525,9 +529,9 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
                 pages={pages}
                 jobs={jobs}
                 paragraphs={paragraphs}
-                onMove={(from, to) => void db.reorderPages(bookId, from, to).then(() => setProgress('Orden de páginas actualizado.'))}
+                onMove={(from, to) => void db.reorderPages(bookId, from, to).then(() => setProgress(t('book.pagesReordered')))}
                 onEdit={setEditPage}
-                onReprocess={(page) => void db.queueReprocess(page).then(() => queue.run(bookId)).then(() => setProgress('Página marcada para reprocesar; el texto anterior se conserva hasta aprobar el nuevo.'))}
+                onReprocess={(page) => void db.queueReprocess(page).then(() => queue.run(bookId)).then(() => setProgress(t('book.reprocessMarked')))}
                 onDelete={setDeletePage}
               />
             ) : null}
@@ -536,10 +540,10 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
                 <Icon name="record-voice-over" size={22} color={colors.onSecondaryContainer} />
               </View>
               <View style={{ flex: 1 }}>
-                <AppText style={{ fontWeight: '800' }}>Voz y velocidad</AppText>
-                <AppText style={{ fontSize: 12, color: colors.muted }}>{snap.voice ? `${snap.voice.name} (${snap.voice.locale})` : 'Sin voz configurada para este idioma'}</AppText>
+                <AppText style={{ fontWeight: '800' }}>{t('book.voiceAndSpeed')}</AppText>
+                <AppText style={{ fontSize: 12, color: colors.muted }}>{snap.voice ? `${snap.voice.name} (${snap.voice.locale})` : t('book.noVoiceConfigured')}</AppText>
               </View>
-              <Button compact variant="outlined" label="Ajustar" onPress={() => setSettingsOpen(true)} />
+              <Button compact variant="outlined" label={t('book.adjust')} onPress={() => setSettingsOpen(true)} />
             </Card>
           </View>
         ) : null}
@@ -601,7 +605,7 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
         onCancel={() => {
           setPdf(null);
           setBusy(false);
-          setProgress('Importación cancelada.');
+          setProgress(t('book.importCancelled'));
         }}
         onImport={(cfg) => {
           const target = pdf;
@@ -611,9 +615,9 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
       />
       <TextEditDialog
         visible={editDraft !== null}
-        title="Revisar texto OCR"
-        label="Corrige antes de añadir al libro"
-        confirmLabel="Añadir al libro"
+        title={t('book.reviewOcrTitle')}
+        label={t('book.reviewOcrLabel')}
+        confirmLabel={t('book.addToBook')}
         initial={editDraft ? (JSON.parse(editDraft.paragraphsJson) as string[]).join('\n\n') : ''}
         onCancel={() => setEditDraft(null)}
         onConfirm={(text) => {
@@ -624,38 +628,38 @@ export function BookScreen({ route, navigation }: NativeStackScreenProps<AppStac
       />
       <TextEditDialog
         visible={editPage !== null}
-        title="Editar texto de la página"
-        label="Modifica el texto y guarda los cambios"
-        confirmLabel="Guardar cambios"
+        title={t('book.editPageTitle')}
+        label={t('book.editPageLabel')}
+        confirmLabel={t('book.saveChanges')}
         initial={editPage ? pageText(editPage) : ''}
         onCancel={() => setEditPage(null)}
         onConfirm={(text) => void saveEditedPage(text)}
       />
       <ConfirmDialog
         visible={deletePage !== null}
-        title="¿Eliminar esta página?"
-        message="Se eliminarán sus fotos y párrafos del libro. Esta acción no se puede deshacer."
-        confirmLabel="Eliminar"
+        title={t('book.deletePageTitle')}
+        message={t('book.deletePageMessage')}
+        confirmLabel={t('book.deletePageConfirm')}
         danger
         onCancel={() => setDeletePage(null)}
         onConfirm={() => {
           const page = deletePage;
           setDeletePage(null);
-          if (page) void db.deletePage(page.id).then(() => setProgress('Página eliminada.'));
+          if (page) void db.deletePage(page.id).then(() => setProgress(t('book.pageDeleted')));
         }}
       />
       <Dialog
         visible={renaming}
-        title="Renombrar libro"
+        title={t('book.renameBook')}
         onClose={() => setRenaming(false)}
         actions={
           <>
-            <Button label="Cancelar" variant="text" onPress={() => setRenaming(false)} />
-            <Button label="Guardar" onPress={() => void renameBook()} />
+            <Button label={t('cancel')} variant="text" onPress={() => setRenaming(false)} />
+            <Button label={t('book.save')} onPress={() => void renameBook()} />
           </>
         }
       >
-        <TextField label="Título del libro" value={renameText} onChangeText={setRenameText} autoFocus onSubmitEditing={() => void renameBook()} />
+        <TextField label={t('book.bookTitleLabel')} value={renameText} onChangeText={setRenameText} autoFocus onSubmitEditing={() => void renameBook()} />
       </Dialog>
       <ImageZoomDialog uri={zoom} onClose={() => setZoom(null)} />
     </View>

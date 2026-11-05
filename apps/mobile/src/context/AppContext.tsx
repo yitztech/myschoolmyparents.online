@@ -9,7 +9,7 @@ import { SecureSessionStorage } from '../services/secureSessionStorage';
 import { HttpSyncApiClient } from '../sync/apiClient';
 import { SyncEngine } from '../sync/engine';
 import { API_URL, SYNC_API_URL } from '../config';
-import { DEFAULT_MOBILE_LOCALE, MOBILE_STRINGS, isMobileLocale, matchMobileLocale, type MobileLocale } from '../i18n';
+import { DEFAULT_MOBILE_LOCALE, MOBILE_STRINGS, isMobileLocale, matchMobileLocale, setActiveLocale, translate, translatePlural, type MobileLocale } from '../i18n';
 
 const UI_LOCALE_KEY = 'msm.uiLocale';
 
@@ -33,6 +33,18 @@ export const useApp = () => {
 /** Textos de la interfaz en el idioma elegido por la persona. */
 export const useStrings = () => MOBILE_STRINGS[useApp().uiLocale];
 
+/** `t(clave, variables)` y `p(clave base, cantidad, variables)` en el idioma elegido; se re-renderiza al cambiarlo. */
+export const useT = () => {
+  const locale = useApp().uiLocale;
+  return useMemo(
+    () => ({
+      t: (key: string, values?: Record<string, string | number>) => translate(locale, key, values),
+      p: (baseKey: string, count: number, values?: Record<string, string | number>) => translatePlural(locale, baseKey, count, values),
+    }),
+    [locale],
+  );
+};
+
 type Boot = { status: 'loading' } | { status: 'error'; error: string } | { status: 'ready'; value: Omit<AppContextValue, 'user' | 'uiLocale' | 'setUiLocale'> };
 
 async function readStoredLocale(): Promise<MobileLocale> {
@@ -53,6 +65,7 @@ export function AppProvider({ children, loading, failed }: { children: React.Rea
   const started = useRef(false);
 
   const setUiLocale = useCallback((locale: MobileLocale) => {
+    setActiveLocale(locale);
     setLocale(locale);
     void AsyncStorage.setItem(UI_LOCALE_KEY, locale).catch(() => undefined);
   }, []);
@@ -62,7 +75,9 @@ export function AppProvider({ children, loading, failed }: { children: React.Rea
     started.current = true;
     (async () => {
       try {
-        setLocale(await readStoredLocale());
+        const stored = await readStoredLocale();
+        setActiveLocale(stored);
+        setLocale(stored);
         const db = await openAppDatabase();
         const auth = new HttpAuthService(API_URL, new SecureSessionStorage());
         auth.subscribe(setUser);

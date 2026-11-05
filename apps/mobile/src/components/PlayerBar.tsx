@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, Icon, IconButton } from './ui';
 import type { SpeechSnapshot } from '../speech/speechController';
 import { colors, shadow } from '../theme';
+import { useT } from '../context/AppContext';
 
 /** Barra inferior de reproducción: velocidad rápida, progreso, anterior/play/siguiente y detener. */
 export function PlayerBar({
@@ -26,10 +27,11 @@ export function PlayerBar({
   onStop: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const { t, p } = useT();
   const speaking = snap.state === 'speaking' || snap.state === 'preparing';
   const paused = snap.state === 'paused';
   const active = snap.activeParagraph;
-  const progress = active >= 0 && active < total ? `Párrafo ${active + 1} de ${total}` : `Listo para leer (${total} párrafos)`;
+  const progress = active >= 0 && active < total ? t('book.paragraphOf', { index: active + 1, total }) : p('book.readyToRead', total);
   const slow = snap.rate < 0.4;
 
   return (
@@ -42,7 +44,7 @@ export function PlayerBar({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={slow ? 'Velocidad lenta. Cambiar a normal' : 'Velocidad normal. Cambiar a lenta'}
+          accessibilityLabel={slow ? t('book.switchToNormalSpeed') : t('book.switchToSlowSpeed')}
           onPress={onToggleRate}
           style={{ backgroundColor: slow ? colors.tertiaryContainer : colors.secondaryContainer, borderRadius: 14, paddingHorizontal: 8, paddingVertical: 6 }}
         >
@@ -56,20 +58,20 @@ export function PlayerBar({
             </AppText>
           </View>
           <AppText numberOfLines={1} style={{ fontSize: 11, color: colors.muted }}>
-            {snap.voice?.name ?? `Voz estándar (${learningLocale})`}
+            {snap.voice?.name ?? t('book.standardVoice', { locale: learningLocale })}
           </AppText>
         </View>
-        <IconButton icon="skip-previous" label="Párrafo anterior" disabled={!(active > 0)} onPress={onPrev} />
+        <IconButton icon="skip-previous" label={t('book.previousParagraph')} disabled={!(active > 0)} onPress={onPrev} />
         <IconButton
           filled
           icon={speaking ? 'pause' : 'play-arrow'}
-          label={speaking ? 'Pausar' : paused ? 'Continuar' : 'Escuchar todo'}
+          label={speaking ? t('book.pause') : paused ? t('book.resume') : t('book.listenAll')}
           disabled={snap.voice === null || total === 0}
           onPress={onPlayPause}
           size={24}
         />
-        <IconButton icon="skip-next" label="Párrafo siguiente" disabled={!(active >= 0 && active < total - 1)} onPress={onNext} />
-        <IconButton icon="stop" label="Detener" size={20} disabled={!(speaking || paused)} onPress={onStop} />
+        <IconButton icon="skip-next" label={t('book.nextParagraph')} disabled={!(active >= 0 && active < total - 1)} onPress={onNext} />
+        <IconButton icon="stop" label={t('book.stop')} size={20} disabled={!(speaking || paused)} onPress={onStop} />
       </View>
     </View>
   );

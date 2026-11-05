@@ -1,32 +1,35 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateBookTitle, validateConfirmPassword, validateEmail, validateName, validatePassword } from '../src/lib/validators.ts';
+import { translate } from '../src/i18n/index.ts';
+
+const es = (key: string) => translate('es', key);
 
 test('nombre', () => {
-  assert.equal(validateName(''), 'Escribe tu nombre.');
-  assert.equal(validateName('A'), 'El nombre debe tener al menos 2 letras.');
+  assert.equal(validateName(''), es('validation.nameRequired'));
+  assert.equal(validateName('A'), es('validation.nameMin'));
   assert.equal(validateName('Ana'), null);
 });
 test('correo', () => {
-  assert.equal(validateEmail(null), 'Escribe tu correo electrónico.');
-  assert.equal(validateEmail('ana@'), 'Ese correo no parece válido. Revísalo.');
+  assert.equal(validateEmail(null), es('validation.emailRequired'));
+  assert.equal(validateEmail('ana@'), es('validation.emailInvalid'));
   assert.equal(validateEmail(' ana@correo.com '), null);
 });
 test('contraseña exige longitud, mayúscula, minúscula, número y símbolo', () => {
-  assert.equal(validatePassword('Ab1!'), 'Mínimo 8 caracteres.');
-  assert.equal(validatePassword('abcdefg1!'), 'Añade al menos una mayúscula (A-Z).');
-  assert.equal(validatePassword('ABCDEFG1!'), 'Añade al menos una minúscula (a-z).');
-  assert.equal(validatePassword('Abcdefgh!'), 'Añade al menos un número (0-9).');
-  assert.equal(validatePassword('Abcdefg12'), 'Añade al menos un símbolo (ej. !, @, #).');
+  assert.equal(validatePassword('Ab1!'), es('validation.passwordMin'));
+  assert.equal(validatePassword('abcdefg1!'), es('validation.passwordUpper'));
+  assert.equal(validatePassword('ABCDEFG1!'), es('validation.passwordLower'));
+  assert.equal(validatePassword('Abcdefgh!'), es('validation.passwordDigit'));
+  assert.equal(validatePassword('Abcdefg12'), es('validation.passwordSymbol'));
   assert.equal(validatePassword('Abcdefg1!'), null);
 });
 test('confirmación', () => {
-  assert.equal(validateConfirmPassword('', 'x'), 'Repite la contraseña.');
-  assert.equal(validateConfirmPassword('y', 'x'), 'Las contraseñas no coinciden.');
+  assert.equal(validateConfirmPassword('', 'x'), es('validation.confirmRequired'));
+  assert.equal(validateConfirmPassword('y', 'x'), es('validation.confirmMismatch'));
   assert.equal(validateConfirmPassword('x', 'x'), null);
 });
 test('título del libro: obligatorio y hasta 150 caracteres', () => {
-  assert.equal(validateBookTitle('   '), 'El título no puede estar vacío.');
+  assert.equal(validateBookTitle('   '), es('validation.titleRequired'));
   assert.equal(validateBookTitle('a'.repeat(150)), null);
-  assert.equal(validateBookTitle('a'.repeat(151)), 'El título no puede superar los 150 caracteres.');
+  assert.equal(validateBookTitle('a'.repeat(151)), es('validation.titleMax'));
 });

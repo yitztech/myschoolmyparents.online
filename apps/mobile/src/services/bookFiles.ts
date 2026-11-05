@@ -3,6 +3,7 @@ import * as Sharing from 'expo-sharing';
 import type { AppDatabase } from '../db/database';
 import type { Book } from '../db/schema';
 import { bytesToBase64 } from '../lib/base64';
+import { tr } from '../i18n';
 import {
   EmptyReadingModeError,
   InvalidReadingModeFormatError,
@@ -29,7 +30,7 @@ export interface BookImportResult {
   errorMessage?: string;
 }
 
-const NO_FILE = 'No se seleccionó ningún archivo.';
+const NO_FILE = 'no_file_selected';
 export { NO_FILE };
 
 async function imageBase64(path: string | null): Promise<string | null> {
@@ -54,7 +55,7 @@ export async function exportBookToFile(db: AppDatabase, bookId: string): Promise
   });
   try {
     const book = await db.findBook(bookId);
-    if (!book) return fail('El libro no existe.');
+    if (!book) return fail(tr('library.bookNotFound'));
     const paragraphs = await db.listParagraphs(bookId);
     const pages = await db.getApprovedPages(bookId);
     const json = buildExportJson(
@@ -73,7 +74,7 @@ export async function exportBookToFile(db: AppDatabase, bookId: string): Promise
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(file.uri, {
         mimeType: 'application/json',
-        dialogTitle: 'Exportar libro en Modo Lectura',
+        dialogTitle: tr('library.exportShareTitle'),
         UTI: 'public.json',
       });
     }
@@ -86,7 +87,7 @@ export async function exportBookToFile(db: AppDatabase, bookId: string): Promise
     };
   } catch (e) {
     if (e instanceof EmptyReadingModeError) return fail(e.message);
-    return fail(`Error al exportar libro: ${e instanceof Error ? e.message : String(e)}`);
+    return fail(tr('library.exportError', { message: e instanceof Error ? e.message : String(e) }));
   }
 }
 
@@ -128,7 +129,7 @@ export async function importBookFromFile(db: AppDatabase): Promise<BookImportRes
       success: false,
       totalParagraphs: 0,
       totalPages: 0,
-      errorMessage: `Error al importar libro: ${e instanceof Error ? e.message : String(e)}`,
+      errorMessage: tr('library.importError', { message: e instanceof Error ? e.message : String(e) }),
     };
   }
 }

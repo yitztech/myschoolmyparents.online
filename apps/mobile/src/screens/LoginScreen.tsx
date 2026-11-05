@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthLayout } from '../components/AuthLayout';
 import { AppText, Banner, Button, TextField } from '../components/ui';
-import { useApp } from '../context/AppContext';
+import { useApp, useT } from '../context/AppContext';
 import { AuthError } from '../services/auth';
 import { validateEmail } from '../lib/validators';
 import { displayVersion } from '../lib/appVersion';
@@ -13,6 +13,7 @@ import type { AuthStackParams } from '../navigation/types';
 
 export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackParams, 'Login'>) {
   const { auth } = useApp();
+  const { t } = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string | null; password?: string | null }>({});
@@ -26,26 +27,26 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
       await action();
       // La sesión llega por el contexto y la navegación cambia sola a la biblioteca.
     } catch (e) {
-      setError(e instanceof AuthError ? e.message : 'No se pudo iniciar sesión. Inténtalo de nuevo.');
+      setError(e instanceof AuthError ? e.message : t('auth.loginFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   const submit = () => {
-    const next = { email: validateEmail(email), password: password ? null : 'Escribe tu contraseña.' };
+    const next = { email: validateEmail(email), password: password ? null : t('auth.loginPasswordRequired') };
     setErrors(next);
     if (next.email || next.password) return;
     void run(() => auth.signInWithEmail(email, password));
   };
 
   return (
-    <AuthLayout title="Hola de nuevo" subtitle="Entra para seguir con tus libros de lectura.">
+    <AuthLayout title={t('auth.loginTitle')} subtitle={t('auth.loginSubtitle')}>
       {error ? <Banner message={error} /> : null}
       <TextField
-        label="Correo electrónico"
+        label={t('auth.emailLabel')}
         icon="mail-outline"
-        placeholder="tucorreo@ejemplo.com"
+        placeholder={t('auth.emailPlaceholder')}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
@@ -55,7 +56,7 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
         error={errors.email}
       />
       <TextField
-        label="Contraseña"
+        label={t('auth.passwordLabel')}
         icon="lock-outline"
         secure
         autoCapitalize="none"
@@ -67,24 +68,24 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
         onSubmitEditing={submit}
       />
       <View style={{ alignItems: 'flex-end' }}>
-        <Button label="¿Olvidaste tu contraseña?" variant="text" compact disabled={busy} onPress={() => navigation.navigate('Recover')} />
+        <Button label={t('auth.forgotPassword')} variant="text" compact disabled={busy} onPress={() => navigation.navigate('Recover')} />
       </View>
-      <Button label="Entrar" busy={busy} onPress={submit} />
+      <Button label={t('auth.signIn')} busy={busy} onPress={submit} />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1, height: 1, backgroundColor: colors.outlineVariant }} />
-        <AppText style={{ color: colors.muted }}>o</AppText>
+        <AppText style={{ color: colors.muted }}>{t('auth.orSeparator')}</AppText>
         <View style={{ flex: 1, height: 1, backgroundColor: colors.outlineVariant }} />
       </View>
       <Button
-        label="Continuar sin cuenta (Modo local)"
+        label={t('auth.continueLocal')}
         icon="offline-pin"
         variant="outlined"
         disabled={busy}
         onPress={() => void run(() => auth.signInLocally())}
       />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <AppText>¿No tienes cuenta?</AppText>
-        <Button label="Crear cuenta" variant="text" compact disabled={busy} onPress={() => navigation.navigate('Register')} />
+        <AppText>{t('auth.noAccountQuestion')}</AppText>
+        <Button label={t('auth.createAccount')} variant="text" compact disabled={busy} onPress={() => navigation.navigate('Register')} />
       </View>
       <LegalLinks />
       <AppText style={{ textAlign: 'center', fontSize: 12, color: colors.subtle, fontWeight: '500' }}>{displayVersion()}</AppText>

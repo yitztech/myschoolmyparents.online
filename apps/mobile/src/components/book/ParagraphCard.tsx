@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { AppText, Button } from '../ui';
 import { ReadingParagraph } from '../ReadingParagraph';
 import { colors } from '../../theme';
+import { useT } from '../../context/AppContext';
 import type { TextRange } from '../../lib/textRanges';
 
 /** Párrafo de la pestaña «Ver Libro» con su botón «Escuchar». */
@@ -29,6 +30,7 @@ export function ParagraphCard({
   onWord: (r: TextRange) => void;
   onListenSelection: (excerpt: string, r: TextRange) => void;
 }) {
+  const { t } = useT();
   return (
     <View
       style={{
@@ -43,9 +45,9 @@ export function ParagraphCard({
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <AppText style={{ fontSize: 12, fontWeight: '700', color: colors.muted, flexShrink: 1 }}>
-          Página {pageNumber} · párrafo {paragraphNumber}
+          {t('book.paragraphLabel', { page: pageNumber, paragraph: paragraphNumber })}
         </AppText>
-        <Button compact variant="tonal" icon="volume-up" label="Escuchar" disabled={!canListen} onPress={onListen} />
+        <Button compact variant="tonal" icon="volume-up" label={t('book.listen')} disabled={!canListen} onPress={onListen} />
       </View>
       <ReadingParagraph text={text} fontSize={fontSize} activeWordRange={activeWord} onWord={onWord} onListenSelection={onListenSelection} />
     </View>

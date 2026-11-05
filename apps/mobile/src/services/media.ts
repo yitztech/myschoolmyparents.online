@@ -4,6 +4,7 @@ import { Asset } from 'expo-asset';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { buildImageActions, isIdentityTransform, type ImageTransformOptions } from '../lib/imageTransform';
+import { tr } from '../i18n';
 
 const capturesDir = () => {
   const dir = new Directory(Paths.document, 'a00-captures');
@@ -82,6 +83,6 @@ export async function recoverLostPhotos(): Promise<string[]> {
 export async function sampleImage(): Promise<string> {
   const asset = Asset.fromModule(require('../../assets/sample/learning_page.png'));
   await asset.downloadAsync();
-  if (!asset.localUri) throw new Error('No se pudo cargar la página de ejemplo.');
+  if (!asset.localUri) throw new Error(tr('capture.sampleLoadFailed'));
   return persistImage(asset.localUri);
 }

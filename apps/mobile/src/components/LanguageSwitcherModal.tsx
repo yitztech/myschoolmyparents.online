@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MOBILE_LOCALES, type MobileLocale } from '../i18n';
+import { useT } from '../context/AppContext';
 import { colors, radius } from '../theme';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function LanguageSwitcherModal({ visible, currentLocale, onSelect, onClose }: Props) {
+  const { t } = useT();
   const currentHeader =
     MOBILE_LOCALES.find((l) => l.code === currentLocale)?.header ?? MOBILE_LOCALES[0].header;
 
@@ -37,7 +39,7 @@ export function LanguageSwitcherModal({ visible, currentLocale, onSelect, onClos
                     onClose();
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel={`${item.label} ${isSelected ? '(seleccionado)' : ''}`}
+                  accessibilityLabel={isSelected ? t('library.localeSelected', { language: item.label }) : item.label}
                 >
                   <View style={styles.labelGroup}>
                     <Text style={styles.flag}>{item.flag}</Text>

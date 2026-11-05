@@ -1,132 +1,52 @@
-export type MobileLocale = 'es' | 'en' | 'pt' | 'de' | 'fr';
+import { DEFAULT_MOBILE_LOCALE, type MobileLocale } from './locales';
+import { authStrings } from './catalogs/auth';
+import { bookStrings } from './catalogs/book';
+import { captureStrings } from './catalogs/capture';
+import { commonStrings } from './catalogs/common';
+import { libraryStrings } from './catalogs/library';
 
-export interface MobileLocaleOption {
-  code: MobileLocale;
-  label: string;
-  flag: string;
-  header: string;
-}
+export * from './locales';
 
-export const MOBILE_LOCALES: MobileLocaleOption[] = [
-  { code: 'es', label: 'Español', flag: '🇪🇸', header: 'VER ESTA APP EN ESPAÑOL' },
-  { code: 'en', label: 'English', flag: '🇺🇸', header: 'VIEW THIS APP IN ENGLISH' },
-  { code: 'pt', label: 'Português', flag: '🇧🇷', header: 'VER ESTE APP EM PORTUGUÊS' },
-  { code: 'de', label: 'Deutsch', flag: '🇩🇪', header: 'DIESE APP AUF DEUTSCH ANSEHEN' },
-  { code: 'fr', label: 'Français', flag: '🇫🇷', header: 'VOIR CETTE APPLICATION EN FRANÇAIS' },
-];
-
-export const DEFAULT_MOBILE_LOCALE: MobileLocale = 'es';
-
-export const fillText = (template: string, values: Record<string, string>) =>
-  template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
-
-export function isMobileLocale(value: unknown): value is MobileLocale {
-  return MOBILE_LOCALES.some((l) => l.code === value);
-}
-
-export function matchMobileLocale(languageCode: string | null | undefined): MobileLocale {
-  return isMobileLocale(languageCode) ? languageCode : DEFAULT_MOBILE_LOCALE;
-}
+const catalogs = [commonStrings, authStrings, libraryStrings, bookStrings, captureStrings];
 
 export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
-  es: {
-    booksTitle: 'Mis libros',
-    createBook: 'Crear libro',
-    readsIn: 'Se lee en',
-    emptyTitle: 'Sin libros todavía',
-    emptyDesc: 'Toma fotos de una lectura o importa un PDF para empezar.',
-    settings: 'Ajustes',
-    sync: 'Sincronización',
-    account: 'Cuenta',
-    about: 'Acerca de',
-    close: 'Cerrar',
-    cancel: 'Cancelar',
-    openSettings: 'Abrir ajustes',
-    cameraDenied: 'Necesitamos permiso para usar la cámara. Puedes activarlo en los ajustes del teléfono.',
-    noVoiceFor: 'No hay voz para {language}.',
-    configureVoice: 'Configurar',
-    logoutTitle: '¿Cerrar sesión?',
-    logoutMessage: 'Para sincronizar tendrás que volver a iniciar sesión.',
-    logoutConfirm: 'Cerrar sesión',
-  },
-  en: {
-    booksTitle: 'My books',
-    createBook: 'Create book',
-    readsIn: 'Reads in',
-    emptyTitle: 'No books yet',
-    emptyDesc: 'Take photos of reading pages or import a PDF to start.',
-    settings: 'Settings',
-    sync: 'Sync',
-    account: 'Account',
-    about: 'About',
-    close: 'Close',
-    cancel: 'Cancel',
-    openSettings: 'Open Settings',
-    cameraDenied: 'We need permission to use the camera. You can turn it on in your phone settings.',
-    noVoiceFor: 'No voice for {language}.',
-    configureVoice: 'Set up',
-    logoutTitle: 'Sign out?',
-    logoutMessage: 'To sync, you will need to sign in again.',
-    logoutConfirm: 'Sign out',
-  },
-  pt: {
-    booksTitle: 'Meus livros',
-    createBook: 'Criar livro',
-    readsIn: 'Lê-se em',
-    emptyTitle: 'Sem livros ainda',
-    emptyDesc: 'Tire fotos de uma leitura ou importe um PDF para começar.',
-    settings: 'Configurações',
-    sync: 'Sincronização',
-    account: 'Conta',
-    about: 'Sobre',
-    close: 'Fechar',
-    cancel: 'Cancelar',
-    openSettings: 'Abrir configurações',
-    cameraDenied: 'Precisamos de permissão para usar a câmera. Pode ativá-la nas configurações do telefone.',
-    noVoiceFor: 'Não há voz para {language}.',
-    configureVoice: 'Configurar',
-    logoutTitle: 'Sair da conta?',
-    logoutMessage: 'Para sincronizar, será preciso entrar de novo.',
-    logoutConfirm: 'Sair',
-  },
-  de: {
-    booksTitle: 'Meine Bücher',
-    createBook: 'Buch erstellen',
-    readsIn: 'Liest auf',
-    emptyTitle: 'Noch keine Bücher',
-    emptyDesc: 'Fotografieren Sie Leseseiten oder importieren Sie ein PDF.',
-    settings: 'Einstellungen',
-    sync: 'Synchronisierung',
-    account: 'Konto',
-    about: 'Über',
-    close: 'Schließen',
-    cancel: 'Abbrechen',
-    openSettings: 'Einstellungen öffnen',
-    cameraDenied: 'Wir benötigen die Berechtigung für die Kamera. Sie können sie in den Telefoneinstellungen aktivieren.',
-    noVoiceFor: 'Keine Stimme für {language}.',
-    configureVoice: 'Einrichten',
-    logoutTitle: 'Abmelden?',
-    logoutMessage: 'Zum Synchronisieren müssen Sie sich erneut anmelden.',
-    logoutConfirm: 'Abmelden',
-  },
-  fr: {
-    booksTitle: 'Mes livres',
-    createBook: 'Créer un livre',
-    readsIn: 'Se lit en',
-    emptyTitle: 'Pas encore de livres',
-    emptyDesc: 'Prenez en photo des pages ou importez un PDF pour commencer.',
-    settings: 'Paramètres',
-    sync: 'Synchronisation',
-    account: 'Compte',
-    about: 'À propos',
-    close: 'Fermer',
-    cancel: 'Annuler',
-    openSettings: 'Ouvrir les réglages',
-    cameraDenied: 'L\'application a besoin de l\'autorisation d\'utiliser l\'appareil photo. Vous pouvez l\'activer dans les réglages du téléphone.',
-    noVoiceFor: 'Aucune voix pour {language}.',
-    configureVoice: 'Configurer',
-    logoutTitle: 'Se déconnecter ?',
-    logoutMessage: 'Pour synchroniser, vous devrez vous reconnecter.',
-    logoutConfirm: 'Se déconnecter',
-  },
+  es: Object.assign({}, ...catalogs.map((c) => c.es)),
+  en: Object.assign({}, ...catalogs.map((c) => c.en)),
+  pt: Object.assign({}, ...catalogs.map((c) => c.pt)),
+  de: Object.assign({}, ...catalogs.map((c) => c.de)),
+  fr: Object.assign({}, ...catalogs.map((c) => c.fr)),
 };
+
+export const fillText = (template: string, values: Record<string, string | number>) =>
+  template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
+
+/** Forma plural de los cinco idiomas: «one» o «other» (en pt y fr, 0 también es «one»). */
+export function pluralForm(locale: MobileLocale, count: number): 'one' | 'other' {
+  const one = locale === 'pt' || locale === 'fr' ? count >= 0 && count < 2 : count === 1;
+  return one ? 'one' : 'other';
+}
+
+let activeLocale: MobileLocale = DEFAULT_MOBILE_LOCALE;
+
+/** Idioma de la interfaz para los textos que salen fuera de los componentes (servicios, errores). */
+export function setActiveLocale(locale: MobileLocale) {
+  activeLocale = locale;
+}
+
+export const activeMobileLocale = () => activeLocale;
+
+/** Texto del catálogo en un idioma. Las variables van como `{nombre}`. */
+export function translate(locale: MobileLocale, key: string, values: Record<string, string | number> = {}): string {
+  const text = MOBILE_STRINGS[locale][key] ?? MOBILE_STRINGS[DEFAULT_MOBILE_LOCALE][key] ?? key;
+  return fillText(text, values);
+}
+
+/** Texto en plural: la clave base lleva sufijos `.one` y `.other`, y `{count}` es la cantidad. */
+export function translatePlural(locale: MobileLocale, baseKey: string, count: number, values: Record<string, string | number> = {}): string {
+  return translate(locale, `${baseKey}.${pluralForm(locale, count)}`, { count, ...values });
+}
+
+/** Para servicios y código fuera de React: usa el idioma activo de la interfaz. */
+export const tr = (key: string, values?: Record<string, string | number>) => translate(activeLocale, key, values);
+export const trPlural = (baseKey: string, count: number, values?: Record<string, string | number>) =>
+  translatePlural(activeLocale, baseKey, count, values);
