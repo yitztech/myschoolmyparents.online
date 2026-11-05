@@ -515,14 +515,27 @@ export function Reader({ book, paragraphs }: Props) {
                 </div>
               )}
 
-              <div className="rounded-xl border border-ink/10 bg-paper-deep/30 p-3">
-                <span className="text-xs font-bold text-ink-soft uppercase tracking-wider">
-                  {t.reader.definition}:
-                </span>
-                <p className="mt-1 text-sm font-medium leading-relaxed text-ink">
-                  {activeWordModal.meaning}
-                </p>
-              </div>
+              {activeWordModal.found ? (
+                <div className="rounded-xl border border-ink/10 bg-paper-deep/30 p-3">
+                  <span className="text-xs font-bold text-ink-soft uppercase tracking-wider">
+                    {t.reader.definition}:
+                  </span>
+                  <p className="mt-1 text-sm font-medium leading-relaxed text-ink">
+                    {activeWordModal.meaning}
+                  </p>
+                </div>
+              ) : (
+                // Miss honesto: sin definición inventada ni atajo falso a un
+                // glosario que no existe; el botón real de escuchar está abajo.
+                <div className="rounded-xl border border-dashed border-ink/25 bg-paper-deep/20 p-3">
+                  <span className="text-xs font-bold text-ink-soft uppercase tracking-wider">
+                    {t.reader.definitionMissing}
+                  </span>
+                  <p className="mt-1 text-sm font-medium leading-relaxed text-ink">
+                    {t.reader.definitionMissingHint}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-2 border-t-2 border-ink/15 pt-3">

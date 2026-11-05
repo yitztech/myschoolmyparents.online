@@ -77,6 +77,11 @@ test.describe('Lector accesible (critique r1)', () => {
     await expect(ficha).toBeVisible();
     await expect(ficha.getByRole('heading')).toContainText(/adventure/i);
 
+    // 2b) Miss honesto: 'adventure' no está en el diccionario — la ficha lo
+    //     dice y no inventa una definición plantilla.
+    await expect(ficha.getByText('Sin definición todavía')).toBeVisible();
+    await expect(ficha.getByRole('button', { name: /Volver a escuchar/i })).toBeVisible();
+
     // 3) Escape cierra la ficha y devuelve el foco a la palabra de origen.
     await page.keyboard.press('Escape');
     await expect(ficha).toBeHidden();
