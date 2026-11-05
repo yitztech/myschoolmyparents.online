@@ -15,6 +15,16 @@ export const MOBILE_LOCALES: MobileLocaleOption[] = [
   { code: 'fr', label: 'Français', flag: '🇫🇷', header: 'VOIR CETTE APPLICATION EN FRANÇAIS' },
 ];
 
+export const DEFAULT_MOBILE_LOCALE: MobileLocale = 'es';
+
+export function isMobileLocale(value: unknown): value is MobileLocale {
+  return MOBILE_LOCALES.some((l) => l.code === value);
+}
+
+export function matchMobileLocale(languageCode: string | null | undefined): MobileLocale {
+  return isMobileLocale(languageCode) ? languageCode : DEFAULT_MOBILE_LOCALE;
+}
+
 export const MOBILE_STRINGS: Record<MobileLocale, Record<string, string>> = {
   es: {
     booksTitle: 'Mis libros',

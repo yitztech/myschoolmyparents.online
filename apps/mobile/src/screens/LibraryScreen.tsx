@@ -9,7 +9,7 @@ import { useToast } from '../components/Toast';
 import { useApp } from '../context/AppContext';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import type { Book } from '../db/schema';
-import { MOBILE_STRINGS, type MobileLocale } from '../i18n';
+import { MOBILE_STRINGS } from '../i18n';
 import { displayVersion } from '../lib/appVersion';
 import { importBookFromFile, exportBookToFile, NO_FILE } from '../services/bookFiles';
 import { colors, bookTheme, friendlyLocale, LOCALES, radius } from '../theme';
@@ -30,7 +30,7 @@ const greeting = () => {
 };
 
 export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackParams, 'Library'>) {
-  const { db, auth, user, sync } = useApp();
+  const { db, auth, user, sync, uiLocale, setUiLocale } = useApp();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const books = useLiveQuery(db, (d) => d.listBooks(), [], [] as Book[]);
@@ -39,7 +39,6 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
   const [syncing, setSyncing] = useState(false);
   const [about, setAbout] = useState(false);
   const [langModalOpen, setLangModalOpen] = useState(false);
-  const [uiLocale, setUiLocale] = useState<MobileLocale>('es');
   const [createOpen, setCreateOpen] = useState(false);
   const [cloudOpen, setCloudOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Book | null>(null);
