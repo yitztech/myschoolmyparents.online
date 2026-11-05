@@ -87,7 +87,8 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
   };
 
   const header = (
-    <View style={{ paddingTop: insets.top + 8, backgroundColor: colors.surface, paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+    <View style={{ paddingTop: insets.top + 8, backgroundColor: colors.surface, paddingHorizontal: 16, paddingBottom: 8, gap: 8 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
       <Image source={require('../../assets/branding/my_school_my_parents_logo.png')} style={{ width: 36, height: 36, borderRadius: 9 }} accessibilityLabel={t('library.logoAlt')} />
       <View style={{ flex: 1 }}>
         <AppText accessibilityRole="header" style={{ fontWeight: '800', fontSize: 18 }}>
@@ -95,6 +96,8 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
         </AppText>
         <AppText style={{ fontSize: 11, fontWeight: '500', color: colors.muted }}>{displayVersion()}</AppText>
       </View>
+    </View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 6 }}>
       <IconButton icon="translate" label={t('library.changeLanguage')} onPress={() => setLangModalOpen(true)} />
       <IconButton icon="info-outline" label={t('library.appInfo')} onPress={() => setAbout(true)} />
       <Pressable
@@ -109,6 +112,7 @@ export function LibraryScreen({ navigation }: NativeStackScreenProps<AppStackPar
       </Pressable>
       <IconButton icon="file-download" label={t('library.importBookLabel')} onPress={() => void importBook()} />
       <IconButton icon="logout" label={t('library.signOut')} onPress={() => setLogoutOpen(true)} />
+    </View>
     </View>
   );
 
